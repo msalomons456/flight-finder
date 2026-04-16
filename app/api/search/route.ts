@@ -1,45 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getJson } from "serpapi";
 
-const REGIONS: Record<string, { label: string; airports: string[] }> = {
-  us_northeast: {
-    label: "US Northeast",
-    airports: ["JFK", "LGA", "EWR", "BOS", "PHL", "BWI", "DCA"],
-  },
-  us_southeast: {
-    label: "US Southeast",
-    airports: ["ATL", "MIA", "FLL", "MCO", "CLT", "RDU", "TPA"],
-  },
-  us_midwest: {
-    label: "US Midwest",
-    airports: ["ORD", "MDW", "DTW", "MSP", "STL", "CLE", "CMH"],
-  },
-  us_west: {
-    label: "US West Coast",
-    airports: ["LAX", "SFO", "SJC", "OAK", "SEA", "PDX", "LAS"],
-  },
-  us_southwest: {
-    label: "US Southwest",
-    airports: ["DFW", "DAL", "IAH", "HOU", "PHX", "DEN", "ABQ"],
-  },
-  uk_ireland: {
-    label: "UK & Ireland",
-    airports: ["LHR", "LGW", "MAN", "EDI", "DUB", "STN", "BHX"],
-  },
-  western_europe: {
-    label: "Western Europe",
-    airports: ["CDG", "AMS", "FRA", "BRU", "ZUR", "VIE", "MUC"],
-  },
-};
-
 type Layover = { id: string; name: string; duration: number; overnight?: boolean };
 
-async function cheapestFlightFromOrigin(
+type FlightResult = {
+  origin: string;
+  price: number;
+  currency: string;
+  airline: string;
+  flightNumber: string;
+  airlineLogo: string;
+  departure: string;
+  arrival: string;
+  duration: string;
+  stops: number;
+  layovers: Layover[];
+};
+
+function toResult(origin: string, flight: Record<string, unknown>): FlightResult | null {
+  const legs = (flight.flights as {
+    departure_airport: { time: string };
+    arrival_airport: { time: string };
+    airline: string;
+    airline_logo: string;
+    flight_number: string;
+    duration: number;
+  }[]) ?? [];
+  if (!legs.length) return null;
+
+  const firstLeg = legs[0];
+  const lastLeg = legs[legs.length - 1];
+  const totalMinutes = legs.reduce((sum, l) => sum + (l.duration ?? 0), 0);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+
+  const layovers: Layover[] = ((flight.layovers as Layover[]) ?? []).map((l) => ({
+    id: l.id,
+    name: l.name,
+    duration: l.duration,
+    overnight: l.overnight ?? false,
+  }));
+
+  return {
+    origin,
+    price: flight.price as number,
+    currency: "USD",
+    airline: firstLeg.airline,
+    flightNumber: firstLeg.flight_number ?? "",
+    airlineLogo: firstLeg.airline_logo,
+    departure: firstLeg.departure_airport.time,
+    arrival: lastLeg.arrival_airport.time,
+    duration: `PT${h}H${m}M`,
+    stops: legs.length - 1,
+    layovers,
+  };
+}
+
+async function flightsFromOrigin(
   origin: string,
   destination: string,
   date: string,
-  adults: number
-) {
+  adults: number,
+  maxStops: number | null
+): Promise<FlightResult[]> {
   try {
     const data = await getJson({
       engine: "google_flights",
@@ -53,83 +76,46 @@ async function cheapestFlightFromOrigin(
       api_key: process.env.SERPAPI_KEY,
     });
 
-    const flights = [...(data.best_flights ?? []), ...(data.other_flights ?? [])];
-    if (!flights.length) return null;
+    let flights = [...(data.best_flights ?? []), ...(data.other_flights ?? [])];
 
-    flights.sort((a: { price: number }, b: { price: number }) => a.price - b.price);
-    const flight = flights[0];
-    const legs: {
-      departure_airport: { time: string };
-      arrival_airport: { time: string };
-      airline: string;
-      airline_logo: string;
-      duration: number;
-    }[] = flight.flights ?? [];
-    if (!legs.length) return null;
+    if (maxStops !== null) {
+      flights = flights.filter((f) => (f.flights?.length ?? 1) - 1 <= maxStops);
+    }
+    if (!flights.length) return [];
 
-    const firstLeg = legs[0];
-    const lastLeg = legs[legs.length - 1];
-    const totalMinutes = legs.reduce((sum: number, l: { duration: number }) => sum + (l.duration ?? 0), 0);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-
-    const layovers: Layover[] = (flight.layovers ?? []).map((l: Layover) => ({
-      id: l.id,
-      name: l.name,
-      duration: l.duration,
-      overnight: l.overnight ?? false,
-    }));
-
-    return {
-      origin,
-      price: flight.price,
-      currency: "USD",
-      airline: firstLeg.airline,
-      airlineLogo: firstLeg.airline_logo,
-      departure: firstLeg.departure_airport.time,
-      arrival: lastLeg.arrival_airport.time,
-      duration: `PT${h}H${m}M`,
-      stops: legs.length - 1,
-      layovers,
-    };
+    return flights
+      .map((f) => toResult(origin, f))
+      .filter(Boolean) as FlightResult[];
   } catch {
-    return null;
+    return [];
   }
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const destination = searchParams.get("destination")?.toUpperCase();
-  const regionKey = searchParams.get("region");
+  const regionLabel = searchParams.get("regionLabel");
+  const airportsParam = searchParams.get("airports");
   const date = searchParams.get("date");
   const adults = parseInt(searchParams.get("adults") || "1");
-  const maxStops = searchParams.get("maxStops");
+  const maxStopsParam = searchParams.get("maxStops");
+  const maxStops = maxStopsParam !== null && maxStopsParam !== "" ? parseInt(maxStopsParam) : null;
 
-  if (!destination || !regionKey || !date) {
+  if (!destination || !airportsParam || !date || !regionLabel) {
     return NextResponse.json({ error: "Missing required params" }, { status: 400 });
   }
 
-  const region = REGIONS[regionKey];
-  if (!region) {
-    return NextResponse.json({ error: "Unknown region" }, { status: 400 });
-  }
+  const airports = airportsParam.split(",").map((a) => a.trim()).filter(Boolean);
 
   const settled = await Promise.allSettled(
-    region.airports.map((origin) =>
-      cheapestFlightFromOrigin(origin, destination, date, adults)
+    airports.map((origin) =>
+      flightsFromOrigin(origin, destination, date, adults, maxStops)
     )
   );
 
-  let results = settled
-    .map((r) => (r.status === "fulfilled" ? r.value : null))
-    .filter(Boolean) as NonNullable<Awaited<ReturnType<typeof cheapestFlightFromOrigin>>>[];
+  const results = settled
+    .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+    .sort((a, b) => a.price - b.price);
 
-  if (maxStops !== null && maxStops !== "") {
-    const max = parseInt(maxStops);
-    results = results.filter((r) => r.stops <= max);
-  }
-
-  results.sort((a, b) => a.price - b.price);
-
-  return NextResponse.json({ region: region.label, destination, results });
+  return NextResponse.json({ region: regionLabel, destination, results });
 }

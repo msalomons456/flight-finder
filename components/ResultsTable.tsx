@@ -52,17 +52,19 @@ export default function ResultsTable({ data }: { data: SearchResults }) {
           >
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               {/* Rank + Origin */}
-              <div className="flex items-center gap-3 sm:w-32">
+              <div className="flex items-center gap-3 sm:w-40">
                 <span className={`text-lg font-bold w-7 text-center ${i === 0 ? "text-green-600" : "text-gray-400"}`}>
                   #{i + 1}
                 </span>
                 <div>
                   <div className="text-2xl font-bold text-blue-800">{r.origin}</div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 whitespace-nowrap">
                     {r.airlineLogo && (
-                      <Image src={r.airlineLogo} alt={r.airline} width={16} height={16} className="object-contain" />
+                      <Image src={r.airlineLogo} alt={r.airline} width={16} height={16} className="object-contain flex-shrink-0" />
                     )}
-                    <span className="text-xs text-gray-400">{r.airline}</span>
+                    <span className="text-xs text-gray-400">
+                      {r.airline}{r.flightNumber ? ` ${r.flightNumber.replace(/^[A-Z0-9]+\s/, "")}` : ""}
+                    </span>
                   </div>
                 </div>
               </div>

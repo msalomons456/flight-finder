@@ -16,6 +16,7 @@ export type FlightResult = {
   price: number;
   currency: string;
   airline: string;
+  flightNumber: string;
   airlineLogo: string;
   departure: string;
   arrival: string;
@@ -37,7 +38,8 @@ export default function Home() {
 
   async function handleSearch(params: {
     destination: string;
-    region: string;
+    regionLabel: string;
+    airports: string[];
     date: string;
     adults: string;
     maxStops: string;
@@ -47,7 +49,14 @@ export default function Home() {
     setResults(null);
 
     try {
-      const qs = new URLSearchParams(params).toString();
+      const qs = new URLSearchParams({
+        destination: params.destination,
+        regionLabel: params.regionLabel,
+        airports: params.airports.join(","),
+        date: params.date,
+        adults: params.adults,
+        maxStops: params.maxStops,
+      }).toString();
       const res = await fetch(`/api/search?${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Search failed");

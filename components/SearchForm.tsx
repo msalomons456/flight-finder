@@ -1,36 +1,35 @@
 "use client";
 
 import { useState } from "react";
-
-const REGIONS = [
-  { key: "us_northeast", label: "US Northeast (BOS, JFK, EWR, PHL, BWI…)" },
-  { key: "us_southeast", label: "US Southeast (ATL, MIA, CLT, RDU…)" },
-  { key: "us_midwest",   label: "US Midwest (ORD, DTW, MSP, STL…)" },
-  { key: "us_west",      label: "US West Coast (LAX, SFO, SEA, PDX…)" },
-  { key: "us_southwest", label: "US Southwest (DFW, IAH, PHX, DEN…)" },
-  { key: "uk_ireland",   label: "UK & Ireland (LHR, LGW, MAN, DUB…)" },
-  { key: "western_europe", label: "Western Europe (CDG, AMS, FRA, VIE…)" },
-];
+import RegionCombobox from "@/components/RegionCombobox";
+import { type Region } from "@/lib/regions";
 
 type Props = {
-  onSearch: (params: { destination: string; region: string; date: string; adults: string; maxStops: string }) => void;
+  onSearch: (params: { destination: string; regionLabel: string; airports: string[]; date: string; adults: string; maxStops: string }) => void;
   loading: boolean;
 };
 
-const inputClass = "border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black bg-white";
+const inputClass = "h-11 border border-gray-200 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black bg-white";
 
 export default function SearchForm({ onSearch, loading }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const [destination, setDestination] = useState("");
-  const [region, setRegion] = useState(REGIONS[0].key);
+  const [region, setRegion] = useState<Region | null>(null);
   const [date, setDate] = useState("");
   const [adults, setAdults] = useState("1");
   const [maxStops, setMaxStops] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!destination || !date) return;
-    onSearch({ destination: destination.toUpperCase(), region, date, adults, maxStops });
+    if (!destination || !region || !date) return;
+    onSearch({
+      destination: destination.toUpperCase(),
+      regionLabel: region.label,
+      airports: region.airports,
+      date,
+      adults,
+      maxStops,
+    });
   }
 
   return (
@@ -48,22 +47,14 @@ export default function SearchForm({ onSearch, loading }: Props) {
             onChange={(e) => setDestination(e.target.value.toUpperCase())}
             maxLength={3}
             required
-            className={`${inputClass} text-lg font-mono uppercase tracking-widest placeholder:text-gray-400`}
+            className={`${inputClass} font-mono uppercase tracking-widest placeholder:text-gray-400`}
           />
           <span className="text-xs text-gray-400">3-letter IATA code</span>
         </div>
 
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">Search From Region</label>
-          <select
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            className={inputClass}
-          >
-            {REGIONS.map((r) => (
-              <option key={r.key} value={r.key}>{r.label}</option>
-            ))}
-          </select>
+          <RegionCombobox value={region} onChange={setRegion} inputClass={inputClass} />
         </div>
 
         <div className="flex flex-col gap-1">
@@ -119,7 +110,7 @@ export default function SearchForm({ onSearch, loading }: Props) {
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || !region}
         className="mt-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl transition-colors text-lg"
       >
         {loading ? "Searching…" : "Find Cheapest Flights"}
