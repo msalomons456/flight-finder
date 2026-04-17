@@ -112,6 +112,7 @@ export default function Home() {
   const [searchedAt, setSearchedAt] = useState<Date | null>(null);
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [mapAirportFilter, setMapAirportFilter] = useState<string | null>(null);
   const [formDefaults, setFormDefaults] = useState<{
     destinationAirport?: Airport | null;
     region?: Region | null;
@@ -197,6 +198,7 @@ export default function Home() {
     setReturnTimes([]);
     setSelectedAlliance("");
     setSearchedAt(null);
+    setMapAirportFilter(null);
     setStep("search");
     setSearchParams(params);
 
@@ -445,18 +447,42 @@ export default function Home() {
                   <div className="mt-4">
                     <FlightMap
                       results={filteredOutbound.results}
-                      onSelect={handleSelectOutbound}
-                      selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
+                      onPinClick={(code) => {
+                        setMapAirportFilter(code);
+                        setViewMode("list");
+                      }}
                       pinAtOrigin={searchParams?.destination !== "surprise"}
                     />
                   </div>
                 ) : (
-                  <ResultsTable
-                    data={filteredOutbound}
-                    onSelect={handleSelectOutbound}
-                    selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
-                    searchedAt={searchedAt}
-                  />
+                  <>
+                    {mapAirportFilter && (
+                      <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+                        <span>Showing flights from <strong>{mapAirportFilter}</strong></span>
+                        <button
+                          onClick={() => setMapAirportFilter(null)}
+                          className="ml-auto text-blue-400 hover:text-blue-700 font-semibold"
+                        >
+                          ✕ Clear
+                        </button>
+                      </div>
+                    )}
+                    <ResultsTable
+                      data={{
+                        ...filteredOutbound,
+                        results: mapAirportFilter
+                          ? filteredOutbound.results.filter((r) =>
+                              searchParams?.destination !== "surprise"
+                                ? r.origin === mapAirportFilter
+                                : r.legs[r.legs.length - 1]?.arrivalCode === mapAirportFilter
+                            )
+                          : filteredOutbound.results,
+                      }}
+                      onSelect={handleSelectOutbound}
+                      selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
+                      searchedAt={searchedAt}
+                    />
+                  </>
                 )}
               </>
             )}
