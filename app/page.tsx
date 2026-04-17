@@ -116,6 +116,23 @@ export default function Home() {
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
+
+    // Restore shared itinerary
+    const encoded = p.get("itinerary");
+    if (encoded) {
+      try {
+        const { outbound, returnFlight, adults, travelClass } = JSON.parse(
+          atob(encoded.replace(/-/g, "+").replace(/_/g, "/"))
+        );
+        setSelectedOutbound(outbound);
+        setSelectedReturn(returnFlight ?? null);
+        setSearchParams((prev) => prev ?? { destination: "", regionLabel: "", airports: [], date: "", returnDate: "", tripType: returnFlight ? "1" : "2", adults: adults ?? "1", maxStops: "", travelClass: travelClass ?? "1" });
+        setStep("summary");
+        return;
+      } catch { /* invalid encoded data, fall through */ }
+    }
+
+    // Restore shared search
     const iata = p.get("to");
     const airports = p.get("airports")?.split(",").filter(Boolean) ?? [];
     const regionLabel = p.get("from");
@@ -216,6 +233,7 @@ export default function Home() {
 
     if (searchParams?.tripType !== "1") {
       setStep("summary");
+      updateItineraryUrl(flight, null, searchParams?.adults ?? "1", searchParams?.travelClass ?? "1");
       return;
     }
 
@@ -263,6 +281,13 @@ export default function Home() {
   function handleSelectReturn(flight: FlightResult) {
     setSelectedReturn(flight);
     setStep("summary");
+    updateItineraryUrl(selectedOutbound!, flight, searchParams?.adults ?? "1", searchParams?.travelClass ?? "1");
+  }
+
+  function updateItineraryUrl(outbound: FlightResult, returnFlight: FlightResult | null, adults: string, travelClass: string) {
+    const payload = JSON.stringify({ outbound, returnFlight, adults, travelClass });
+    const encoded = btoa(payload).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+    window.history.replaceState(null, "", `?itinerary=${encoded}`);
   }
 
   function handleBack() {
