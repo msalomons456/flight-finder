@@ -185,7 +185,7 @@ export default function Home() {
           fetchFlights({
             destination: originAirport,                      // arrive at each airport in the origin region
             regionLabel: searchParams!.regionLabel,
-            airports: [searchParams!.destination],           // fly FROM the destination
+            airports: searchParams!.destination,              // fly FROM the destination
             date: searchParams!.returnDate,
             returnDate: "",
             tripType: "2",

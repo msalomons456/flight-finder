@@ -16,6 +16,7 @@ type Props = {
     tripType: "1" | "2";
     adults: string;
     maxStops: string;
+    travelClass: string;
   }) => void;
   loading: boolean;
 };
