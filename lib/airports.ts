@@ -337,6 +337,10 @@ export const AIRPORTS: Airport[] = [
   { iata: "PPT", name: "Faa'a International", city: "Papeete", country: "French Polynesia" },
 ];
 
+function normalize(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export type CityResult = {
   key: string;
   label: string;
@@ -345,12 +349,12 @@ export type CityResult = {
 };
 
 export function searchCities(query: string): CityResult[] {
-  const q = query.toLowerCase().trim();
+  const q = normalize(query.trim());
   if (q.length < 1) return [];
 
   const cityMap = new Map<string, CityResult>();
   for (const a of AIRPORTS) {
-    if (a.city.toLowerCase().includes(q)) {
+    if (normalize(a.city).includes(q)) {
       const key = `${a.city}__${a.country}`;
       if (!cityMap.has(key)) {
         cityMap.set(key, { key, label: a.city, country: a.country, airports: [] });
@@ -369,12 +373,12 @@ export type CountryResult = {
 };
 
 export function searchCountries(query: string): CountryResult[] {
-  const q = query.toLowerCase().trim();
+  const q = normalize(query.trim());
   if (q.length < 1) return [];
 
   const countryMap = new Map<string, CountryResult>();
   for (const a of AIRPORTS) {
-    if (a.country.toLowerCase().includes(q)) {
+    if (normalize(a.country).includes(q)) {
       const key = `country__${a.country}`;
       if (!countryMap.has(key)) {
         countryMap.set(key, { key, label: a.country, airports: [] });
@@ -387,14 +391,14 @@ export function searchCountries(query: string): CountryResult[] {
 }
 
 export function searchAirports(query: string): Airport[] {
-  const q = query.toLowerCase().trim();
+  const q = normalize(query.trim());
   if (q.length < 2) return [];
   return AIRPORTS.filter(
     (a) =>
-      a.city.toLowerCase().includes(q) ||
-      a.country.toLowerCase().includes(q) ||
+      normalize(a.city).includes(q) ||
+      normalize(a.country).includes(q) ||
       a.iata.toLowerCase().includes(q) ||
-      a.name.toLowerCase().includes(q)
+      normalize(a.name).includes(q)
   ).slice(0, 8);
 }
 
@@ -403,12 +407,12 @@ export function findAirportByIata(iata: string): Airport | null {
 }
 
 export function searchAirportsByCodeOrName(query: string): Airport[] {
-  const q = query.toLowerCase().trim();
+  const q = normalize(query.trim());
   if (q.length < 2) return [];
   return AIRPORTS.filter(
     (a) =>
       a.iata.toLowerCase().includes(q) ||
-      a.name.toLowerCase().includes(q)
+      normalize(a.name).includes(q)
   ).slice(0, 5);
 }
 
