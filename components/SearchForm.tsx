@@ -6,6 +6,17 @@ import DestinationCombobox from "@/components/DestinationCombobox";
 import { type Region } from "@/lib/regions";
 import { type Airport } from "@/lib/airports";
 
+type DefaultValues = {
+  destinationAirport?: Airport | null;
+  region?: Region | null;
+  date?: string;
+  returnDate?: string;
+  tripType?: "1" | "2";
+  adults?: string;
+  maxStops?: string;
+  travelClass?: string;
+};
+
 type Props = {
   onSearch: (params: {
     destination: string;
@@ -19,20 +30,21 @@ type Props = {
     travelClass: string;
   }) => void;
   loading: boolean;
+  defaultValues?: DefaultValues;
 };
 
 const inputClass = "h-11 border border-gray-200 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black bg-white";
 
-export default function SearchForm({ onSearch, loading }: Props) {
+export default function SearchForm({ onSearch, loading, defaultValues }: Props) {
   const today = new Date().toISOString().split("T")[0];
-  const [destinationAirport, setDestinationAirport] = useState<Airport | null>(null);
-  const [region, setRegion] = useState<Region | null>(null);
-  const [tripType, setTripType] = useState<"1" | "2">("1");
-  const [date, setDate] = useState("");
-  const [returnDate, setReturnDate] = useState("");
-  const [adults, setAdults] = useState("1");
-  const [maxStops, setMaxStops] = useState("");
-  const [travelClass, setTravelClass] = useState("1");
+  const [destinationAirport, setDestinationAirport] = useState<Airport | null>(defaultValues?.destinationAirport ?? null);
+  const [region, setRegion] = useState<Region | null>(defaultValues?.region ?? null);
+  const [tripType, setTripType] = useState<"1" | "2">(defaultValues?.tripType ?? "1");
+  const [date, setDate] = useState(defaultValues?.date ?? "");
+  const [returnDate, setReturnDate] = useState(defaultValues?.returnDate ?? "");
+  const [adults, setAdults] = useState(defaultValues?.adults ?? "1");
+  const [maxStops, setMaxStops] = useState(defaultValues?.maxStops ?? "");
+  const [travelClass, setTravelClass] = useState(defaultValues?.travelClass ?? "1");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

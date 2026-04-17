@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import SearchForm from "@/components/SearchForm";
 import ResultsTable from "@/components/ResultsTable";
 import FlightFilters from "@/components/FlightFilters";
 import SummaryPage from "@/components/SummaryPage";
 import { TIME_WINDOWS } from "@/components/FlightFilters";
 import { Alliance, getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
+import { findAirportByIata } from "@/lib/airports";
+import type { Airport } from "@/lib/airports";
+import type { Region } from "@/lib/regions";
 
 export type Layover = {
   id: string;
@@ -102,6 +105,34 @@ export default function Home() {
   const [outboundTimes, setOutboundTimes] = useState<string[]>([]);
   const [returnTimes, setReturnTimes] = useState<string[]>([]);
   const [selectedAlliance, setSelectedAlliance] = useState<Alliance | "">("");
+  const [searchedAt, setSearchedAt] = useState<Date | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [formDefaults, setFormDefaults] = useState<{
+    destinationAirport?: Airport | null;
+    region?: Region | null;
+    date?: string; returnDate?: string;
+    tripType?: "1" | "2"; adults?: string; maxStops?: string; travelClass?: string;
+  }>({});
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const iata = p.get("to");
+    const airports = p.get("airports")?.split(",").filter(Boolean) ?? [];
+    const regionLabel = p.get("from");
+    if (!iata || !regionLabel || !airports.length) return;
+    const airport = findAirportByIata(iata);
+    if (!airport) return;
+    setFormDefaults({
+      destinationAirport: airport,
+      region: { key: "shared", label: regionLabel, airports },
+      date: p.get("date") ?? "",
+      returnDate: p.get("ret") ?? "",
+      tripType: (p.get("type") as "1" | "2") ?? "1",
+      adults: p.get("pax") ?? "1",
+      maxStops: p.get("stops") ?? "",
+      travelClass: p.get("class") ?? "1",
+    });
+  }, []);
 
   const filteredOutbound = useMemo(() => {
     if (!outboundResults) return null;
@@ -143,6 +174,7 @@ export default function Home() {
     setOutboundTimes([]);
     setReturnTimes([]);
     setSelectedAlliance("");
+    setSearchedAt(null);
     setStep("search");
     setSearchParams(params);
 
@@ -159,6 +191,19 @@ export default function Home() {
         travelClass: params.travelClass,
       });
       setOutboundResults(results);
+      setSearchedAt(new Date());
+      const qs = new URLSearchParams({
+        to: params.destination,
+        from: params.regionLabel,
+        airports: params.airports.join(","),
+        date: params.date,
+        ret: params.returnDate,
+        type: params.tripType,
+        pax: params.adults,
+        stops: params.maxStops,
+        class: params.travelClass,
+      }).toString();
+      window.history.replaceState(null, "", `?${qs}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -267,7 +312,7 @@ export default function Home() {
           />
         ) : (
           <>
-            <SearchForm onSearch={handleSearch} loading={loading} />
+            <SearchForm onSearch={handleSearch} loading={loading} defaultValues={formDefaults} />
 
             {error && (
               <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
@@ -287,7 +332,22 @@ export default function Home() {
             {/* Outbound results */}
             {step === "search" && filteredOutbound && !loading && (
               <>
-                <div className="mt-6">
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    {copied ? "Link copied!" : "Share search"}
+                  </button>
+                </div>
+                <div className="mt-2">
                   <FlightFilters
                     isRoundTrip={isRoundTrip}
                     outboundTimes={outboundTimes}
@@ -301,6 +361,7 @@ export default function Home() {
                   data={filteredOutbound}
                   onSelect={handleSelectOutbound}
                   selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
+                  searchedAt={searchedAt}
                 />
               </>
             )}

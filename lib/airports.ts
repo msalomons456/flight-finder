@@ -396,6 +396,10 @@ export function searchAirports(query: string): Airport[] {
   ).slice(0, 8);
 }
 
+export function findAirportByIata(iata: string): Airport | null {
+  return AIRPORTS.find((a) => a.iata === iata.toUpperCase()) ?? null;
+}
+
 export function searchAirportsByCodeOrName(query: string): Airport[] {
   const q = query.toLowerCase().trim();
   if (q.length < 2) return [];

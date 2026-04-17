@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { SearchResults, FlightResult, Leg } from "@/app/page";
 import { getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
@@ -112,12 +112,30 @@ type Props = {
   data: SearchResults;
   onSelect: (flight: FlightResult) => void;
   selectLabel?: string;
+  searchedAt?: Date | null;
 };
 
-export default function ResultsTable({ data, onSelect, selectLabel = "Select" }: Props) {
+function useFreshnessLabel(searchedAt?: Date | null) {
+  const [label, setLabel] = useState("");
+  useEffect(() => {
+    if (!searchedAt) { setLabel(""); return; }
+    function update() {
+      const mins = Math.floor((Date.now() - searchedAt!.getTime()) / 60000);
+      setLabel(mins < 1 ? "Prices fetched just now" : `Prices fetched ${mins} min ago`);
+    }
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, [searchedAt]);
+  return label;
+}
+
+export default function ResultsTable({ data, onSelect, selectLabel = "Select", searchedAt }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<SortKey>("price");
+  const freshnessLabel = useFreshnessLabel(searchedAt);
+  const isStale = searchedAt ? Date.now() - searchedAt.getTime() > 10 * 60 * 1000 : false;
 
   const sortedResults = useMemo(() => {
     return [...data.results].sort((a, b) =>
@@ -157,9 +175,18 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
               {data.tripType === "1" ? "Round Trip" : "One Way"}
             </span>
           </div>
-          <p className="text-sm text-gray-500">
-            Showing {Math.min(pageSize, data.results.length)} of {data.results.length} results · One-way fare per person
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-sm text-gray-500">
+              Showing {Math.min(pageSize, data.results.length)} of {data.results.length} results · One-way fare per person
+            </p>
+            {freshnessLabel && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                isStale ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+              }`}>
+                {isStale ? "⚠ " : "✓ "}{freshnessLabel}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-sm text-gray-500">Sort:</span>
