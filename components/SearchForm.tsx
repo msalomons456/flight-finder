@@ -102,7 +102,6 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
 
   const surpriseMe = mode === "surprise";
   const tripType: "1" | "2" = mode === "roundtrip" ? "1" : "2";
-  const matchingCount = filterDestinationsByVibes(selectedVibes).length;
   const seasons = useMemo(() => getSeasonMonths(), []);
   const nextMonths = useMemo(() => getNextMonths(12), []);
 
@@ -267,14 +266,7 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
           <>
             {/* Vibe chips */}
             <div className="flex flex-col gap-2 sm:col-span-2">
-              <div className="flex items-baseline gap-2">
-                <label className="text-sm font-semibold text-gray-600">What&apos;s your vibe?</label>
-                <span className="text-xs text-gray-400">
-                  {selectedVibes.length === 0
-                    ? `Searching all ${matchingCount} destinations`
-                    : `${matchingCount} destination${matchingCount !== 1 ? "s" : ""} match`}
-                </span>
-              </div>
+              <label className="text-sm font-semibold text-gray-600">What&apos;s your vibe?</label>
               <div className="flex flex-wrap gap-2">
                 {VIBES.map((vibe) => {
                   const active = selectedVibes.includes(vibe.label);
