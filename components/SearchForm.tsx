@@ -5,7 +5,7 @@ import RegionCombobox from "@/components/RegionCombobox";
 import DestinationCombobox from "@/components/DestinationCombobox";
 import { type Region } from "@/lib/regions";
 import { type Airport } from "@/lib/airports";
-import { SURPRISE_DESTINATIONS } from "@/lib/destinations";
+import { VIBES, filterDestinationsByVibes } from "@/lib/destinations";
 
 type DefaultValues = {
   destinationAirport?: Airport | null;
@@ -29,6 +29,7 @@ type Props = {
     adults: string;
     maxStops: string;
     travelClass: string;
+    surpriseVibes: string[];
   }) => void;
   loading: boolean;
   defaultValues?: DefaultValues;
@@ -36,33 +37,47 @@ type Props = {
 
 const inputClass = "h-11 border border-gray-200 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black bg-white";
 
+type Mode = "roundtrip" | "oneway" | "surprise";
+
 export default function SearchForm({ onSearch, loading, defaultValues }: Props) {
   const today = new Date().toISOString().split("T")[0];
+  const [mode, setMode] = useState<Mode>(defaultValues?.tripType === "2" ? "oneway" : "roundtrip");
   const [destinationAirport, setDestinationAirport] = useState<Airport | null>(defaultValues?.destinationAirport ?? null);
-  const [surpriseMe, setSurpriseMe] = useState(false);
   const [region, setRegion] = useState<Region | null>(defaultValues?.region ?? null);
-  const [tripType, setTripType] = useState<"1" | "2">(defaultValues?.tripType ?? "1");
   const [date, setDate] = useState(defaultValues?.date ?? "");
   const [returnDate, setReturnDate] = useState(defaultValues?.returnDate ?? "");
   const [adults, setAdults] = useState(defaultValues?.adults ?? "1");
   const [maxStops, setMaxStops] = useState(defaultValues?.maxStops ?? "");
   const [travelClass, setTravelClass] = useState(defaultValues?.travelClass ?? "1");
+  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
+
+  const surpriseMe = mode === "surprise";
+  const tripType: "1" | "2" = mode === "roundtrip" ? "1" : "2";
+
+  const matchingCount = filterDestinationsByVibes(selectedVibes).length;
+
+  function toggleVibe(label: string) {
+    setSelectedVibes((prev) =>
+      prev.includes(label) ? prev.filter((v) => v !== label) : [...prev, label]
+    );
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!surpriseMe && !destinationAirport) return;
     if (!region || !date) return;
-    if (tripType === "1" && !returnDate) return;
+    if (mode === "roundtrip" && !returnDate) return;
     onSearch({
       destination: surpriseMe ? "surprise" : destinationAirport!.iata,
       regionLabel: region.label,
       airports: region.airports,
       date,
-      returnDate: tripType === "1" ? returnDate : "",
+      returnDate: mode === "roundtrip" ? returnDate : "",
       tripType,
       adults,
       maxStops,
       travelClass,
+      surpriseVibes: selectedVibes,
     });
   }
 
@@ -71,15 +86,18 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
       onSubmit={handleSubmit}
       className="bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4"
     >
-      {/* Trip type toggle */}
+      {/* Mode toggle */}
       <div className="flex gap-2">
-        {[{ value: "1", label: "Round Trip" }, { value: "2", label: "One Way" }].map((opt) => (
+        {([
+          { value: "roundtrip", label: "Round Trip" },
+          { value: "oneway",    label: "One Way" },
+        ] as { value: Mode; label: string }[]).map((opt) => (
           <button
             key={opt.value}
             type="button"
-            onClick={() => setTripType(opt.value as "1" | "2")}
+            onClick={() => setMode(opt.value)}
             className={`px-5 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-              tripType === opt.value
+              mode === opt.value
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
             }`}
@@ -87,6 +105,17 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
             {opt.label}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setMode(mode === "surprise" ? "roundtrip" : "surprise")}
+          className={`px-5 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+            mode === "surprise"
+              ? "bg-violet-600 text-white border-violet-600"
+              : "bg-white text-violet-600 border-violet-200 hover:border-violet-400"
+          }`}
+        >
+          🎲 Surprise Me!
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -95,34 +124,16 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
           <RegionCombobox value={region} onChange={setRegion} inputClass={inputClass} />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
+        {!surpriseMe && (
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-gray-600">Destination Airport</label>
-            <button
-              type="button"
-              onClick={() => { setSurpriseMe((v) => !v); setDestinationAirport(null); }}
-              className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
-                surpriseMe
-                  ? "bg-violet-600 text-white border-violet-600"
-                  : "bg-white text-violet-600 border-violet-300 hover:border-violet-500"
-              }`}
-            >
-              🎲 Surprise me!
-            </button>
-          </div>
-          {surpriseMe ? (
-            <div className="h-11 flex items-center px-4 border border-violet-300 rounded-lg bg-violet-50 text-violet-700 text-sm font-medium gap-2">
-              <span>🎲</span>
-              <span>Searching {SURPRISE_DESTINATIONS.length} destinations for the best price</span>
-            </div>
-          ) : (
             <DestinationCombobox
               value={destinationAirport}
               onChange={setDestinationAirport}
               inputClass={inputClass}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">Departure Date</label>
@@ -136,7 +147,7 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
           />
         </div>
 
-        {tripType === "1" ? (
+        {mode === "roundtrip" ? (
           <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-gray-600">Return Date</label>
             <input
@@ -151,11 +162,7 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
         ) : (
           <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-gray-600">Passengers</label>
-            <select
-              value={adults}
-              onChange={(e) => setAdults(e.target.value)}
-              className={inputClass}
-            >
+            <select value={adults} onChange={(e) => setAdults(e.target.value)} className={inputClass}>
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <option key={n} value={n}>{n} {n === 1 ? "adult" : "adults"}</option>
               ))}
@@ -163,18 +170,48 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
           </div>
         )}
 
-        {tripType === "1" && (
+        {mode === "roundtrip" && (
           <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-gray-600">Passengers</label>
-            <select
-              value={adults}
-              onChange={(e) => setAdults(e.target.value)}
-              className={inputClass}
-            >
+            <select value={adults} onChange={(e) => setAdults(e.target.value)} className={inputClass}>
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <option key={n} value={n}>{n} {n === 1 ? "adult" : "adults"}</option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Surprise Me vibe selector */}
+        {surpriseMe && (
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <div className="flex items-baseline gap-2">
+              <label className="text-sm font-semibold text-gray-600">What&apos;s your vibe?</label>
+              <span className="text-xs text-gray-400">
+                {selectedVibes.length === 0
+                  ? `Searching all ${matchingCount} destinations`
+                  : `${matchingCount} destination${matchingCount !== 1 ? "s" : ""} match`}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {VIBES.map((vibe) => {
+                const active = selectedVibes.includes(vibe.label);
+                return (
+                  <button
+                    key={vibe.label}
+                    type="button"
+                    onClick={() => toggleVibe(vibe.label)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-violet-400"
+                    }`}
+                  >
+                    <span>{vibe.emoji}</span>
+                    <span>{vibe.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -237,9 +274,13 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
       <button
         type="submit"
         disabled={loading || !region || (!surpriseMe && !destinationAirport)}
-        className="mt-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl transition-colors text-lg"
+        className={`mt-2 w-full text-white font-semibold py-3 rounded-xl transition-colors text-lg disabled:opacity-50 ${
+          surpriseMe
+            ? "bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300"
+            : "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300"
+        }`}
       >
-        {loading ? "Searching…" : "Find Cheapest Flights"}
+        {loading ? "Searching…" : surpriseMe ? "🎲 Find My Surprise Trip" : "Find Cheapest Flights"}
       </button>
     </form>
   );

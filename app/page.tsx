@@ -10,7 +10,7 @@ import { Alliance, getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
 import { findAirportByIata } from "@/lib/airports";
 import type { Airport } from "@/lib/airports";
 import type { Region } from "@/lib/regions";
-import { SURPRISE_DESTINATIONS } from "@/lib/destinations";
+import { filterDestinationsByVibes } from "@/lib/destinations";
 
 export type Layover = {
   id: string;
@@ -67,6 +67,7 @@ type SearchParams = {
   adults: string;
   maxStops: string;
   travelClass: string;
+  surpriseVibes: string[];
 };
 
 type Step = "search" | "selectReturn" | "summary";
@@ -127,7 +128,7 @@ export default function Home() {
         );
         setSelectedOutbound(outbound);
         setSelectedReturn(returnFlight ?? null);
-        setSearchParams((prev) => prev ?? { destination: "", regionLabel: "", airports: [], date: "", returnDate: "", tripType: returnFlight ? "1" : "2", adults: adults ?? "1", maxStops: "", travelClass: travelClass ?? "1" });
+        setSearchParams((prev) => prev ?? { destination: "", regionLabel: "", airports: [], date: "", returnDate: "", tripType: returnFlight ? "1" : "2", adults: adults ?? "1", maxStops: "", travelClass: travelClass ?? "1", surpriseVibes: [] });
         setStep("summary");
         return;
       } catch { /* invalid encoded data, fall through */ }
@@ -200,8 +201,9 @@ export default function Home() {
       let results: SearchResults;
 
       if (params.destination === "surprise") {
+        const destinations = filterDestinationsByVibes(params.surpriseVibes);
         const settled = await Promise.allSettled(
-          SURPRISE_DESTINATIONS.map((dest) =>
+          destinations.map((dest) =>
             fetchFlights({
               destination: dest.iata,
               regionLabel: params.regionLabel,
@@ -382,7 +384,7 @@ export default function Home() {
               <div className="mt-10 text-center">
                 <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent" />
                 <p className="mt-3 text-blue-700">
-                  {step === "selectReturn" ? "Finding return flights…" : searchParams?.destination === "surprise" ? `Searching ${SURPRISE_DESTINATIONS.length} destinations…` : "Searching across all airports in region…"}
+                  {step === "selectReturn" ? "Finding return flights…" : searchParams?.destination === "surprise" ? `Searching ${filterDestinationsByVibes(searchParams.surpriseVibes).length} destinations…` : "Searching across all airports in region…"}
                 </p>
               </div>
             )}
