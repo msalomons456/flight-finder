@@ -5,6 +5,7 @@ import RegionCombobox from "@/components/RegionCombobox";
 import DestinationCombobox from "@/components/DestinationCombobox";
 import { type Region } from "@/lib/regions";
 import { type Airport } from "@/lib/airports";
+import { SURPRISE_DESTINATIONS } from "@/lib/destinations";
 
 type DefaultValues = {
   destinationAirport?: Airport | null;
@@ -38,6 +39,7 @@ const inputClass = "h-11 border border-gray-200 rounded-lg px-4 focus:outline-no
 export default function SearchForm({ onSearch, loading, defaultValues }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const [destinationAirport, setDestinationAirport] = useState<Airport | null>(defaultValues?.destinationAirport ?? null);
+  const [surpriseMe, setSurpriseMe] = useState(false);
   const [region, setRegion] = useState<Region | null>(defaultValues?.region ?? null);
   const [tripType, setTripType] = useState<"1" | "2">(defaultValues?.tripType ?? "1");
   const [date, setDate] = useState(defaultValues?.date ?? "");
@@ -48,10 +50,11 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!destinationAirport || !region || !date) return;
+    if (!surpriseMe && !destinationAirport) return;
+    if (!region || !date) return;
     if (tripType === "1" && !returnDate) return;
     onSearch({
-      destination: destinationAirport.iata,
+      destination: surpriseMe ? "surprise" : destinationAirport!.iata,
       regionLabel: region.label,
       airports: region.airports,
       date,
@@ -93,12 +96,32 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-gray-600">Destination Airport</label>
-          <DestinationCombobox
-            value={destinationAirport}
-            onChange={setDestinationAirport}
-            inputClass={inputClass}
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-gray-600">Destination Airport</label>
+            <button
+              type="button"
+              onClick={() => { setSurpriseMe((v) => !v); setDestinationAirport(null); }}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
+                surpriseMe
+                  ? "bg-violet-600 text-white border-violet-600"
+                  : "bg-white text-violet-600 border-violet-300 hover:border-violet-500"
+              }`}
+            >
+              🎲 Surprise me!
+            </button>
+          </div>
+          {surpriseMe ? (
+            <div className="h-11 flex items-center px-4 border border-violet-300 rounded-lg bg-violet-50 text-violet-700 text-sm font-medium gap-2">
+              <span>🎲</span>
+              <span>Searching {SURPRISE_DESTINATIONS.length} destinations for the best price</span>
+            </div>
+          ) : (
+            <DestinationCombobox
+              value={destinationAirport}
+              onChange={setDestinationAirport}
+              inputClass={inputClass}
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -213,7 +236,7 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
 
       <button
         type="submit"
-        disabled={loading || !region || !destinationAirport}
+        disabled={loading || !region || (!surpriseMe && !destinationAirport)}
         className="mt-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl transition-colors text-lg"
       >
         {loading ? "Searching…" : "Find Cheapest Flights"}

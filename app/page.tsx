@@ -10,6 +10,7 @@ import { Alliance, getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
 import { findAirportByIata } from "@/lib/airports";
 import type { Airport } from "@/lib/airports";
 import type { Region } from "@/lib/regions";
+import { SURPRISE_DESTINATIONS } from "@/lib/destinations";
 
 export type Layover = {
   id: string;
@@ -196,31 +197,63 @@ export default function Home() {
     setSearchParams(params);
 
     try {
-      const results = await fetchFlights({
-        destination: params.destination,
-        regionLabel: params.regionLabel,
-        airports: params.airports.join(","),
-        date: params.date,
-        returnDate: "",
-        tripType: "2",
-        adults: params.adults,
-        maxStops: params.maxStops,
-        travelClass: params.travelClass,
-      });
+      let results: SearchResults;
+
+      if (params.destination === "surprise") {
+        const settled = await Promise.allSettled(
+          SURPRISE_DESTINATIONS.map((dest) =>
+            fetchFlights({
+              destination: dest.iata,
+              regionLabel: params.regionLabel,
+              airports: params.airports.join(","),
+              date: params.date,
+              returnDate: "",
+              tripType: "2",
+              adults: params.adults,
+              maxStops: params.maxStops,
+              travelClass: params.travelClass,
+            })
+          )
+        );
+        const allFlights = settled
+          .flatMap((r) => r.status === "fulfilled" ? r.value.results : [])
+          .filter((r) => typeof r.price === "number" && !isNaN(r.price))
+          .sort((a, b) => a.price - b.price);
+        results = {
+          region: params.regionLabel,
+          destination: "surprise",
+          tripType: "2",
+          results: allFlights,
+        };
+        window.history.replaceState(null, "", window.location.pathname);
+      } else {
+        results = await fetchFlights({
+          destination: params.destination,
+          regionLabel: params.regionLabel,
+          airports: params.airports.join(","),
+          date: params.date,
+          returnDate: "",
+          tripType: "2",
+          adults: params.adults,
+          maxStops: params.maxStops,
+          travelClass: params.travelClass,
+        });
+        const qs = new URLSearchParams({
+          to: params.destination,
+          from: params.regionLabel,
+          airports: params.airports.join(","),
+          date: params.date,
+          ret: params.returnDate,
+          type: params.tripType,
+          pax: params.adults,
+          stops: params.maxStops,
+          class: params.travelClass,
+        }).toString();
+        window.history.replaceState(null, "", `?${qs}`);
+      }
+
       setOutboundResults(results);
       setSearchedAt(new Date());
-      const qs = new URLSearchParams({
-        to: params.destination,
-        from: params.regionLabel,
-        airports: params.airports.join(","),
-        date: params.date,
-        ret: params.returnDate,
-        type: params.tripType,
-        pax: params.adults,
-        stops: params.maxStops,
-        class: params.travelClass,
-      }).toString();
-      window.history.replaceState(null, "", `?${qs}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -349,7 +382,7 @@ export default function Home() {
               <div className="mt-10 text-center">
                 <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent" />
                 <p className="mt-3 text-blue-700">
-                  {step === "selectReturn" ? "Finding return flights…" : "Searching across all airports in region…"}
+                  {step === "selectReturn" ? "Finding return flights…" : searchParams?.destination === "surprise" ? `Searching ${SURPRISE_DESTINATIONS.length} destinations…` : "Searching across all airports in region…"}
                 </p>
               </div>
             )}
