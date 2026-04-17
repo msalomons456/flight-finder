@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { SearchResults, FlightResult, Leg } from "@/app/page";
+
+type SortKey = "price" | "duration";
+
+function parseDurationMinutes(iso: string): number {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!match) return 0;
+  return (parseInt(match[1] ?? "0") * 60) + parseInt(match[2] ?? "0");
+}
 
 function formatTime(str: string) {
   const date = new Date(str.includes("T") ? str : str.replace(" ", "T"));
@@ -94,6 +102,15 @@ type Props = {
 export default function ResultsTable({ data, onSelect, selectLabel = "Select" }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] = useState<SortKey>("price");
+
+  const sortedResults = useMemo(() => {
+    return [...data.results].sort((a, b) =>
+      sortBy === "price"
+        ? a.price - b.price
+        : parseDurationMinutes(a.duration) - parseDurationMinutes(b.duration)
+    );
+  }, [data.results, sortBy]);
 
   if (data.results.length === 0) {
     return (
@@ -115,23 +132,42 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
 
   return (
     <div className="mt-8">
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-xl font-bold text-blue-900">
-            Flights to {data.destination} from {data.region}
-          </h2>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${data.tripType === "1" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
-            {data.tripType === "1" ? "Round Trip" : "One Way"}
-          </span>
+      <div className="flex items-start justify-between mb-4 gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-xl font-bold text-blue-900">
+              Flights to {data.destination} from {data.region}
+            </h2>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${data.tripType === "1" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+              {data.tripType === "1" ? "Round Trip" : "One Way"}
+            </span>
+          </div>
+          <p className="text-sm text-gray-500">
+            Showing {Math.min(pageSize, data.results.length)} of {data.results.length} results
+            {data.tripType === "1" && " · Prices are per person, round trip"}
+          </p>
         </div>
-        <p className="text-sm text-gray-500">
-          Showing {Math.min(pageSize, data.results.length)} of {data.results.length} results — sorted by price
-          {data.tripType === "1" && " · Prices are per person, round trip"}
-        </p>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-gray-500">Sort:</span>
+          {(["price", "duration"] as SortKey[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSortBy(key)}
+              className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+                sortBy === key
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+              }`}
+            >
+              {key === "price" ? "Price" : "Duration"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
-        {data.results.slice(0, pageSize).map((r, i) => {
+        {sortedResults.slice(0, pageSize).map((r, i) => {
           const key = `${r.origin}-${r.flightNumber || r.airline}-${i}`;
           const isExpanded = expanded.has(key);
 

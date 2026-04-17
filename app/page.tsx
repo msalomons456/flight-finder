@@ -6,6 +6,7 @@ import ResultsTable from "@/components/ResultsTable";
 import FlightFilters from "@/components/FlightFilters";
 import SummaryPage from "@/components/SummaryPage";
 import { TIME_WINDOWS } from "@/components/FlightFilters";
+import { Alliance, getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
 
 export type Layover = {
   id: string;
@@ -99,16 +100,37 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [outboundTimes, setOutboundTimes] = useState<string[]>([]);
   const [returnTimes, setReturnTimes] = useState<string[]>([]);
+  const [selectedAlliance, setSelectedAlliance] = useState<Alliance | "">("");
 
   const filteredOutbound = useMemo(() => {
     if (!outboundResults) return null;
-    return { ...outboundResults, results: outboundResults.results.filter((r) => matchesTimeFilter(r.departure, outboundTimes)) };
-  }, [outboundResults, outboundTimes]);
+    return {
+      ...outboundResults,
+      results: outboundResults.results.filter((r) => {
+        if (!matchesTimeFilter(r.departure, outboundTimes)) return false;
+        if (selectedAlliance) {
+          const code = getAirlineCodeFromName(r.airline);
+          if (getAlliance(code) !== selectedAlliance) return false;
+        }
+        return true;
+      }),
+    };
+  }, [outboundResults, outboundTimes, selectedAlliance]);
 
   const filteredReturn = useMemo(() => {
     if (!returnResults) return null;
-    return { ...returnResults, results: returnResults.results.filter((r) => matchesTimeFilter(r.departure, returnTimes)) };
-  }, [returnResults, returnTimes]);
+    return {
+      ...returnResults,
+      results: returnResults.results.filter((r) => {
+        if (!matchesTimeFilter(r.departure, returnTimes)) return false;
+        if (selectedAlliance) {
+          const code = getAirlineCodeFromName(r.airline);
+          if (getAlliance(code) !== selectedAlliance) return false;
+        }
+        return true;
+      }),
+    };
+  }, [returnResults, returnTimes, selectedAlliance]);
 
   async function handleSearch(params: SearchParams) {
     setLoading(true);
@@ -119,6 +141,7 @@ export default function Home() {
     setSelectedReturn(null);
     setOutboundTimes([]);
     setReturnTimes([]);
+    setSelectedAlliance("");
     setStep("search");
     setSearchParams(params);
 
@@ -245,7 +268,9 @@ export default function Home() {
                     isRoundTrip={isRoundTrip}
                     outboundTimes={outboundTimes}
                     returnTimes={returnTimes}
+                    selectedAlliance={selectedAlliance}
                     onChange={(ob, ret) => { setOutboundTimes(ob); setReturnTimes(ret); }}
+                    onAllianceChange={setSelectedAlliance}
                   />
                 </div>
                 <ResultsTable
@@ -275,7 +300,9 @@ export default function Home() {
                     isRoundTrip={false}
                     outboundTimes={returnTimes}
                     returnTimes={[]}
+                    selectedAlliance={selectedAlliance}
                     onChange={(ob) => setReturnTimes(ob)}
+                    onAllianceChange={setSelectedAlliance}
                   />
                 </div>
                 <ResultsTable
