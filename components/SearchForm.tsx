@@ -94,8 +94,11 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
   const [maxStops, setMaxStops] = useState(defaultValues?.maxStops ?? "");
   const [travelClass, setTravelClass] = useState(defaultValues?.travelClass ?? "1");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
+  const [dateMode, setDateMode] = useState<"flexible" | "specific">("flexible");
   const [flexMonth, setFlexMonth] = useState<string | null>(null);
   const [tripDuration, setTripDuration] = useState(7);
+  const [surpriseDate, setSurpriseDate] = useState("");
+  const [surpriseReturnDate, setSurpriseReturnDate] = useState("");
 
   const surpriseMe = mode === "surprise";
   const tripType: "1" | "2" = mode === "roundtrip" ? "1" : "2";
@@ -118,10 +121,16 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
     let retDate = mode === "roundtrip" ? returnDate : "";
 
     if (surpriseMe) {
-      if (!flexMonth) return;
-      const computed = computeDates(flexMonth, tripDuration);
-      outDate = computed.date;
-      retDate = computed.returnDate;
+      if (dateMode === "flexible") {
+        if (!flexMonth) return;
+        const computed = computeDates(flexMonth, tripDuration);
+        outDate = computed.date;
+        retDate = computed.returnDate;
+      } else {
+        if (!surpriseDate) return;
+        outDate = surpriseDate;
+        retDate = surpriseReturnDate;
+      }
     } else {
       if (!outDate) return;
       if (mode === "roundtrip" && !retDate) return;
@@ -141,8 +150,11 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
     });
   }
 
+  const surpriseDateReady = dateMode === "flexible" ? !!flexMonth : !!surpriseDate;
   const canSubmit = region && (
-    surpriseMe ? !!flexMonth : (!!destinationAirport && !!date && (mode !== "roundtrip" || !!returnDate))
+    surpriseMe
+      ? surpriseDateReady
+      : (!!destinationAirport && !!date && (mode !== "roundtrip" || !!returnDate))
   );
 
   return (
@@ -285,65 +297,114 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
               </div>
             </div>
 
-            {/* When — seasons */}
+            {/* When — header + mode toggle */}
             <div className="flex flex-col gap-2 sm:col-span-2">
-              <label className="text-sm font-semibold text-gray-600">When?</label>
-              <div className="flex gap-2 flex-wrap">
-                {seasons.map((s) => (
-                  <button
-                    key={s.yearMonth}
-                    type="button"
-                    onClick={() => setFlexMonth(s.yearMonth)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                      flexMonth === s.yearMonth
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-violet-400"
-                    }`}
-                  >
-                    <span>{s.emoji}</span>
-                    <span>{s.label}</span>
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold text-gray-600">When?</label>
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
+                  {(["flexible", "specific"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setDateMode(m)}
+                      className={`px-3 py-1.5 transition-colors ${
+                        dateMode === m
+                          ? "bg-violet-600 text-white"
+                          : "bg-white text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {m === "flexible" ? "Flexible" : "Specific Date"}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {/* Month pills */}
-              <div className="flex gap-1.5 flex-wrap mt-1">
-                {nextMonths.map((m) => (
-                  <button
-                    key={m.yearMonth}
-                    type="button"
-                    onClick={() => setFlexMonth(m.yearMonth)}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                      flexMonth === m.yearMonth
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-violet-400"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
+
+              {dateMode === "flexible" ? (
+                <>
+                  {/* Season quick-picks */}
+                  <div className="flex gap-2 flex-wrap">
+                    {seasons.map((s) => (
+                      <button
+                        key={s.yearMonth}
+                        type="button"
+                        onClick={() => setFlexMonth(s.yearMonth)}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                          flexMonth === s.yearMonth
+                            ? "bg-violet-600 text-white border-violet-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:border-violet-400"
+                        }`}
+                      >
+                        <span>{s.emoji}</span>
+                        <span>{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {/* Month pills */}
+                  <div className="flex gap-1.5 flex-wrap">
+                    {nextMonths.map((m) => (
+                      <button
+                        key={m.yearMonth}
+                        type="button"
+                        onClick={() => setFlexMonth(m.yearMonth)}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                          flexMonth === m.yearMonth
+                            ? "bg-violet-600 text-white border-violet-600"
+                            : "bg-white text-gray-500 border-gray-200 hover:border-violet-400"
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Departure</label>
+                    <input
+                      type="date"
+                      value={surpriseDate}
+                      min={today}
+                      onChange={(e) => setSurpriseDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Return <span className="text-gray-400">(optional)</span></label>
+                    <input
+                      type="date"
+                      value={surpriseReturnDate}
+                      min={surpriseDate || today}
+                      onChange={(e) => setSurpriseReturnDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Trip length */}
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <label className="text-sm font-semibold text-gray-600">Trip Length</label>
-              <div className="flex gap-2 flex-wrap">
-                {TRIP_DURATIONS.map((d) => (
-                  <button
-                    key={d.days}
-                    type="button"
-                    onClick={() => setTripDuration(d.days)}
-                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                      tripDuration === d.days
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-violet-400"
-                    }`}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+            {/* Trip length — flexible only */}
+            {dateMode === "flexible" && (
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className="text-sm font-semibold text-gray-600">Trip Length</label>
+                <div className="flex gap-2 flex-wrap">
+                  {TRIP_DURATIONS.map((d) => (
+                    <button
+                      key={d.days}
+                      type="button"
+                      onClick={() => setTripDuration(d.days)}
+                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        tripDuration === d.days
+                          ? "bg-violet-600 text-white border-violet-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-violet-400"
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Passengers */}
             <div className="flex flex-col gap-1">
