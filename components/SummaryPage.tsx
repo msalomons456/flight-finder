@@ -171,16 +171,39 @@ export default function SummaryPage({ outbound, returnFlight, adults, travelClas
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
-        {/* Primary: Kayak — opens one tab per leg */}
-        <button
-          onClick={() => {
-            window.open(kayakOutboundUrl, "_blank");
-            if (kayakReturnUrl) window.open(kayakReturnUrl, "_blank");
-          }}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-lg"
-        >
-          Search on Kayak →
-        </button>
+        {/* Primary: Kayak — one tab per leg */}
+        {kayakReturnUrl ? (
+          <div className="flex rounded-xl overflow-hidden">
+            <a
+              href={kayakOutboundUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex flex-col items-center justify-center py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+            >
+              <span className="text-xs text-blue-200 font-normal">Outbound</span>
+              <span>Search on Kayak →</span>
+            </a>
+            <div className="w-px bg-blue-500" />
+            <a
+              href={kayakReturnUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex flex-col items-center justify-center py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+            >
+              <span className="text-xs text-blue-200 font-normal">Return</span>
+              <span>Search on Kayak →</span>
+            </a>
+          </div>
+        ) : (
+          <a
+            href={kayakOutboundUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-lg"
+          >
+            Search on Kayak →
+          </a>
+        )}
 
         {/* Secondary: direct airline links */}
         <div className="flex flex-col gap-1">
