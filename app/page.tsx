@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import SearchForm from "@/components/SearchForm";
 import ResultsTable from "@/components/ResultsTable";
 import FlightFilters from "@/components/FlightFilters";
+import FlightMap from "@/components/FlightMap";
 import SummaryPage from "@/components/SummaryPage";
 import { TIME_WINDOWS } from "@/components/FlightFilters";
 import { Alliance, getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
@@ -109,6 +110,7 @@ export default function Home() {
   const [selectedAlliance, setSelectedAlliance] = useState<Alliance | "">("");
   const [searchedAt, setSearchedAt] = useState<Date | null>(null);
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [formDefaults, setFormDefaults] = useState<{
     destinationAirport?: Airport | null;
     region?: Region | null;
@@ -392,7 +394,28 @@ export default function Home() {
             {/* Outbound results */}
             {step === "search" && filteredOutbound && !loading && (
               <>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex items-center justify-between gap-4">
+                  {/* View toggle */}
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-semibold">
+                    {(["list", "map"] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setViewMode(v)}
+                        className={`px-4 py-1.5 flex items-center gap-1.5 transition-colors ${
+                          viewMode === v
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {v === "list" ? (
+                          <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg> List</>
+                        ) : (
+                          <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg> Map</>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(window.location.href);
@@ -417,12 +440,22 @@ export default function Home() {
                     onAllianceChange={setSelectedAlliance}
                   />
                 </div>
-                <ResultsTable
-                  data={filteredOutbound}
-                  onSelect={handleSelectOutbound}
-                  selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
-                  searchedAt={searchedAt}
-                />
+                {viewMode === "map" ? (
+                  <div className="mt-4">
+                    <FlightMap
+                      results={filteredOutbound.results}
+                      onSelect={handleSelectOutbound}
+                      selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
+                    />
+                  </div>
+                ) : (
+                  <ResultsTable
+                    data={filteredOutbound}
+                    onSelect={handleSelectOutbound}
+                    selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
+                    searchedAt={searchedAt}
+                  />
+                )}
               </>
             )}
 
