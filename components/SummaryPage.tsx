@@ -173,24 +173,23 @@ export default function SummaryPage({ outbound, returnFlight, adults, travelClas
       <div className="flex flex-col gap-3">
         {/* Primary: Kayak — one tab per leg */}
         {kayakReturnUrl ? (
-          <div className="flex rounded-xl overflow-hidden">
+          <div className="flex gap-2">
             <a
               href={kayakOutboundUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex flex-col items-center justify-center py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+              className="flex-1 flex flex-col items-center justify-center py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors text-sm"
             >
-              <span className="text-xs text-blue-200 font-normal">Outbound</span>
+              <span className="text-[10px] text-blue-200 font-normal">Outbound</span>
               <span>Search on Kayak →</span>
             </a>
-            <div className="w-px bg-blue-500" />
             <a
               href={kayakReturnUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex flex-col items-center justify-center py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+              className="flex-1 flex flex-col items-center justify-center py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors text-sm"
             >
-              <span className="text-xs text-blue-200 font-normal">Return</span>
+              <span className="text-[10px] text-blue-200 font-normal">Return</span>
               <span>Search on Kayak →</span>
             </a>
           </div>
@@ -199,7 +198,7 @@ export default function SummaryPage({ outbound, returnFlight, adults, travelClas
             href={kayakOutboundUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-lg"
+            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-colors text-sm"
           >
             Search on Kayak →
           </a>

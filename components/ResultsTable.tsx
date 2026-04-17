@@ -7,6 +7,20 @@ import { getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
 
 type SortKey = "price" | "duration";
 
+function fareClassStyle(travelClass: string): string {
+  if (travelClass === "First")           return "bg-amber-100 text-amber-800";
+  if (travelClass === "Business")        return "bg-violet-100 text-violet-800";
+  if (travelClass === "Premium Economy") return "bg-sky-100 text-sky-800";
+  if (travelClass === "Mixed")           return "bg-orange-100 text-orange-800";
+  return "bg-emerald-100 text-emerald-800";
+}
+
+function resolvedFareClass(legs: Leg[]): string {
+  if (!legs.length) return "";
+  const classes = [...new Set(legs.map((l) => l.travelClass).filter(Boolean))];
+  return classes.length > 1 ? "Mixed" : classes[0];
+}
+
 function parseDurationMinutes(iso: string): number {
   const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
   if (!match) return 0;
@@ -204,22 +218,13 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
                           "text-red-600";
                         return <div className={`text-[10px] font-semibold ${styles}`}>{alliance}</div>;
                       })()}
+                      {r.legs?.length > 0 && resolvedFareClass(r.legs) && (
+                        <span className={`mt-1 self-start text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${fareClassStyle(resolvedFareClass(r.legs))}`}>
+                          {resolvedFareClass(r.legs)}
+                        </span>
+                      )}
                     </div>
                   </div>
-
-                  {/* Fare class badge */}
-                  {r.legs?.[0]?.travelClass && (
-                    <div className="hidden sm:flex items-center">
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${
-                        r.legs[0].travelClass === "First" ? "bg-amber-100 text-amber-800" :
-                        r.legs[0].travelClass === "Business" ? "bg-purple-100 text-purple-800" :
-                        r.legs[0].travelClass === "Premium Economy" ? "bg-sky-100 text-sky-800" :
-                        "bg-gray-100 text-gray-600"
-                      }`}>
-                        {r.legs[0].travelClass}
-                      </span>
-                    </div>
-                  )}
 
                   {/* Route */}
                   <div className="flex-1 sm:px-4 flex flex-col gap-1">
@@ -242,7 +247,7 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
                       </span>
                     </div>
                     {r.layovers && r.layovers.length > 0 && (
-                      <div className="flex justify-center flex-wrap gap-1.5">
+                      <div className="flex flex-col items-center gap-1">
                         {r.layovers.map((l) => (
                           <span
                             key={l.id}
