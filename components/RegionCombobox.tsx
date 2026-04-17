@@ -14,9 +14,10 @@ type Props = {
   value: Region | null;
   onChange: (region: Region) => void;
   inputClass: string;
+  placeholder?: string;
 };
 
-export default function RegionCombobox({ value, onChange, inputClass }: Props) {
+export default function RegionCombobox({ value, onChange, inputClass, placeholder = "e.g. JFK, Paris, France, US Northeast…" }: Props) {
   const [query, setQuery] = useState(value?.label ?? "");
   const [groups, setGroups] = useState<SuggestionGroup[]>([]);
   const [open, setOpen] = useState(false);
@@ -116,7 +117,7 @@ export default function RegionCombobox({ value, onChange, inputClass }: Props) {
         onChange={handleChange}
         onFocus={() => { if (query) { const g = buildGroups(query); setGroups(g); setOpen(g.length > 0); } }}
         onKeyDown={handleKeyDown}
-        placeholder="e.g. JFK, Paris, France, US Northeast…"
+        placeholder={placeholder}
         className={`${inputClass} w-full placeholder:text-gray-400`}
         autoComplete="off"
       />

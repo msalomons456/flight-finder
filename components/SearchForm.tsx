@@ -2,13 +2,11 @@
 
 import { useState, useMemo } from "react";
 import RegionCombobox from "@/components/RegionCombobox";
-import DestinationCombobox from "@/components/DestinationCombobox";
 import { type Region } from "@/lib/regions";
-import { type Airport } from "@/lib/airports";
 import { VIBES, filterDestinationsByVibes } from "@/lib/destinations";
 
 type DefaultValues = {
-  destinationAirport?: Airport | null;
+  destinationRegion?: Region | null;
   region?: Region | null;
   date?: string;
   returnDate?: string;
@@ -20,7 +18,8 @@ type DefaultValues = {
 
 type Props = {
   onSearch: (params: {
-    destination: string;
+    destinationAirports: string[];
+    destinationLabel: string;
     regionLabel: string;
     airports: string[];
     date: string;
@@ -86,7 +85,7 @@ function computeDates(yearMonth: string, tripDays: number): { date: string; retu
 export default function SearchForm({ onSearch, loading, defaultValues }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const [mode, setMode] = useState<Mode>(defaultValues?.tripType === "2" ? "oneway" : "roundtrip");
-  const [destinationAirport, setDestinationAirport] = useState<Airport | null>(defaultValues?.destinationAirport ?? null);
+  const [destinationRegion, setDestinationRegion] = useState<Region | null>(defaultValues?.destinationRegion ?? null);
   const [region, setRegion] = useState<Region | null>(defaultValues?.region ?? null);
   const [date, setDate] = useState(defaultValues?.date ?? "");
   const [returnDate, setReturnDate] = useState(defaultValues?.returnDate ?? "");
@@ -113,7 +112,7 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!surpriseMe && !destinationAirport) return;
+    if (!surpriseMe && !destinationRegion) return;
     if (!region) return;
 
     let outDate = date;
@@ -136,7 +135,8 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
     }
 
     onSearch({
-      destination: surpriseMe ? "surprise" : destinationAirport!.iata,
+      destinationAirports: surpriseMe ? ["surprise"] : destinationRegion!.airports,
+      destinationLabel: surpriseMe ? "surprise" : destinationRegion!.label,
       regionLabel: region.label,
       airports: region.airports,
       date: outDate,
@@ -153,7 +153,7 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
   const canSubmit = region && (
     surpriseMe
       ? surpriseDateReady
-      : (!!destinationAirport && !!date && (mode !== "roundtrip" || !!returnDate))
+      : (!!destinationRegion && !!date && (mode !== "roundtrip" || !!returnDate))
   );
 
   return (
@@ -203,11 +203,12 @@ export default function SearchForm({ onSearch, loading, defaultValues }: Props) 
         {/* Destination — hidden in surprise mode */}
         {!surpriseMe && (
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-600">Destination Airport</label>
-            <DestinationCombobox
-              value={destinationAirport}
-              onChange={setDestinationAirport}
+            <label className="text-sm font-semibold text-gray-600">Destination</label>
+            <RegionCombobox
+              value={destinationRegion}
+              onChange={setDestinationRegion}
               inputClass={inputClass}
+              placeholder="e.g. Tokyo, Japan, Europe, SYD…"
             />
           </div>
         )}
