@@ -2,6 +2,19 @@
 
 import Image from "next/image";
 import { FlightResult, Leg } from "@/app/page";
+import { getAirlineCodeFromName, getAirlineWebsite } from "@/lib/alliances";
+
+function buildKayakOneWayUrl(flight: FlightResult, adults: string, travelClass: string): string {
+  const toDate = (str: string) => str.replace("T", " ").slice(0, 10);
+  const cabinMap: Record<string, string> = {
+    "1": "economy", "2": "premiumeconomy", "3": "business", "4": "first",
+  };
+  const cabin = cabinMap[travelClass] ?? "economy";
+  const o = flight.legs[0].departureCode;
+  const d = flight.legs[flight.legs.length - 1].arrivalCode;
+  const dep = toDate(flight.departure);
+  return `https://www.kayak.com/flights/${o}-${d}/${dep}/${adults}adults/${cabin}`;
+}
 
 function formatDateTime(str: string) {
   const date = new Date(str.includes("T") ? str : str.replace(" ", "T"));
@@ -93,16 +106,24 @@ function FlightCard({ flight, label }: { flight: FlightResult; label: string }) 
 type Props = {
   outbound: FlightResult;
   returnFlight: FlightResult | null;
+  adults: string;
+  travelClass: string;
   onBack: () => void;
   onStartOver: () => void;
 };
 
-export default function SummaryPage({ outbound, returnFlight, onBack, onStartOver }: Props) {
+export default function SummaryPage({ outbound, returnFlight, adults, travelClass, onBack, onStartOver }: Props) {
   const total = outbound.price + (returnFlight?.price ?? 0);
   const isRoundTrip = !!returnFlight;
 
-  const bookingAirline = outbound.airline;
-  const bookingUrl = `https://www.google.com/flights`;
+  const kayakOutboundUrl = buildKayakOneWayUrl(outbound, adults, travelClass);
+  const kayakReturnUrl = returnFlight ? buildKayakOneWayUrl(returnFlight, adults, travelClass) : null;
+
+  const directLinks: { label: string; airline: string; logo: string }[] = [];
+  directLinks.push({ label: "Outbound", airline: outbound.airline, logo: outbound.airlineLogo });
+  if (returnFlight) {
+    directLinks.push({ label: "Return", airline: returnFlight.airline, logo: returnFlight.airlineLogo });
+  }
 
   return (
     <div className="mt-8 flex flex-col gap-6">
@@ -130,37 +151,62 @@ export default function SummaryPage({ outbound, returnFlight, onBack, onStartOve
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5">
         <h3 className="font-bold text-gray-700 mb-3">Price Summary</h3>
         <div className="flex flex-col gap-2 text-sm text-gray-600">
-          <div className="flex justify-between">
+          <div className="flex justify-between items-baseline">
             <span>Outbound ({outbound.origin} → {outbound.legs[outbound.legs.length - 1]?.arrivalCode})</span>
-            <span className="font-medium">${outbound.price.toFixed(0)}</span>
+            <span className="font-medium">${outbound.price.toFixed(0)} <span className="text-xs text-gray-400 font-normal">one-way</span></span>
           </div>
           {returnFlight && (
-            <div className="flex justify-between">
+            <div className="flex justify-between items-baseline">
               <span>Return ({returnFlight.origin} → {returnFlight.legs[returnFlight.legs.length - 1]?.arrivalCode})</span>
-              <span className="font-medium">${returnFlight.price.toFixed(0)}</span>
+              <span className="font-medium">${returnFlight.price.toFixed(0)} <span className="text-xs text-gray-400 font-normal">one-way</span></span>
             </div>
           )}
           <div className="flex justify-between pt-3 border-t border-gray-100 text-base font-bold text-gray-800">
             <span>Estimated Total</span>
             <span>${total.toFixed(0)}</span>
           </div>
-          <p className="text-xs text-gray-400 mt-1">Prices are estimates. Final price confirmed on airline site.</p>
+          <p className="text-xs text-gray-400 mt-1">Each price is a one-way fare. Total is the combined cost of both legs. Final price confirmed on airline site.</p>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <a
-          href={bookingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-lg"
+      <div className="flex flex-col gap-3">
+        {/* Primary: Kayak — opens one tab per leg */}
+        <button
+          onClick={() => {
+            window.open(kayakOutboundUrl, "_blank");
+            if (kayakReturnUrl) window.open(kayakReturnUrl, "_blank");
+          }}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-lg"
         >
-          Book on {bookingAirline} →
-        </a>
+          Search on Kayak →
+        </button>
+
+        {/* Secondary: direct airline links */}
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-gray-400 text-center">Or book directly with the airline</p>
+          <div className="flex gap-2">
+            {directLinks.map(({ label, airline, logo }) => (
+              <a
+                key={label}
+                href={getAirlineWebsite(getAirlineCodeFromName(airline))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-white border border-gray-200 hover:border-blue-400 text-gray-700 font-medium py-2.5 rounded-xl transition-colors text-sm"
+              >
+                <span className="text-[10px] text-gray-400 font-normal">{label}</span>
+                <div className="flex items-center gap-1.5">
+                  {logo && <Image src={logo} alt={airline} width={14} height={14} className="object-contain" />}
+                  <span>{airline}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+
         <button
           onClick={onStartOver}
-          className="flex-1 text-center bg-white border border-gray-200 hover:border-blue-400 text-gray-600 font-semibold py-3 rounded-xl transition-colors text-lg"
+          className="w-full text-center bg-white border border-gray-200 hover:border-blue-400 text-gray-600 font-semibold py-3 rounded-xl transition-colors"
         >
           Start New Search
         </button>

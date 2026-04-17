@@ -62,6 +62,7 @@ type SearchParams = {
   tripType: "1" | "2";
   adults: string;
   maxStops: string;
+  travelClass: string;
 };
 
 type Step = "search" | "selectReturn" | "summary";
@@ -151,10 +152,11 @@ export default function Home() {
         regionLabel: params.regionLabel,
         airports: params.airports.join(","),
         date: params.date,
-        returnDate: params.returnDate,
-        tripType: params.tripType,
+        returnDate: "",
+        tripType: "2",
         adults: params.adults,
         maxStops: params.maxStops,
+        travelClass: params.travelClass,
       });
       setOutboundResults(results);
     } catch (e: unknown) {
@@ -172,24 +174,39 @@ export default function Home() {
       return;
     }
 
-    // Round trip — fetch return flights
+    // Round trip — fetch return flights to every airport in the origin region
     setLoading(true);
     setError(null);
     setReturnTimes([]);
 
     try {
-      const results = await fetchFlights({
-        destination: flight.origin,                          // return TO the origin airport
-        regionLabel: searchParams!.regionLabel,
-        airports: [searchParams!.destination],               // fly FROM the destination
-        date: searchParams!.returnDate,
-        returnDate: "",
-        tripType: "2",                                       // one-way leg
-        adults: searchParams!.adults,
-        maxStops: searchParams!.maxStops,
+      const settled = await Promise.allSettled(
+        searchParams!.airports.map((originAirport) =>
+          fetchFlights({
+            destination: originAirport,                      // arrive at each airport in the origin region
+            regionLabel: searchParams!.regionLabel,
+            airports: [searchParams!.destination],           // fly FROM the destination
+            date: searchParams!.returnDate,
+            returnDate: "",
+            tripType: "2",
+            adults: searchParams!.adults,
+            maxStops: searchParams!.maxStops,
+            travelClass: searchParams!.travelClass,
+          })
+        )
+      );
+
+      const allFlights = settled
+        .flatMap((r) => r.status === "fulfilled" ? r.value.results : [])
+        .filter((r) => typeof r.price === "number" && !isNaN(r.price))
+        .sort((a, b) => a.price - b.price);
+
+      setReturnResults({
+        region: searchParams!.regionLabel,
+        destination: searchParams!.regionLabel,
+        tripType: "2",
+        results: allFlights,
       });
-      // Label it as a return search
-      setReturnResults({ ...results, region: `${searchParams!.destination} → ${flight.origin}` });
       setStep("selectReturn");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -228,7 +245,12 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100">
       <div className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-blue-900 mb-2">FlightFinder</h1>
+          <button
+            onClick={handleStartOver}
+            className="text-4xl font-bold text-blue-900 mb-2 hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            FlightFinder
+          </button>
           <p className="text-blue-600 text-lg">
             Pick your destination. We&apos;ll find the cheapest flight from anywhere nearby.
           </p>
@@ -238,6 +260,8 @@ export default function Home() {
           <SummaryPage
             outbound={selectedOutbound}
             returnFlight={selectedReturn}
+            adults={searchParams?.adults ?? "1"}
+            travelClass={searchParams?.travelClass ?? "1"}
             onBack={handleBack}
             onStartOver={handleStartOver}
           />
@@ -288,7 +312,7 @@ export default function Home() {
                   <div>
                     <h2 className="text-xl font-bold text-blue-900">Now choose your return flight</h2>
                     <p className="text-sm text-gray-500">
-                      {searchParams?.destination} → {selectedOutbound?.origin} · {searchParams?.returnDate}
+                      {searchParams?.destination} → {searchParams?.regionLabel} · {searchParams?.returnDate}
                     </p>
                   </div>
                   <button onClick={handleBack} className="text-sm text-blue-600 hover:underline">
@@ -301,6 +325,7 @@ export default function Home() {
                     outboundTimes={returnTimes}
                     returnTimes={[]}
                     selectedAlliance={selectedAlliance}
+                    outboundLabel="Return Departure"
                     onChange={(ob) => setReturnTimes(ob)}
                     onAllianceChange={setSelectedAlliance}
                   />

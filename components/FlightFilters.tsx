@@ -16,7 +16,6 @@ export const ALLIANCES: { value: Alliance | ""; label: string; color: string }[]
   { value: "Star Alliance", label: "Star Alliance", color: "border-blue-300 text-blue-700 bg-blue-50 hover:border-blue-500" },
   { value: "SkyTeam",      label: "SkyTeam",       color: "border-sky-300 text-sky-700 bg-sky-50 hover:border-sky-500" },
   { value: "oneworld",     label: "oneworld",      color: "border-red-300 text-red-700 bg-red-50 hover:border-red-500" },
-  { value: "None",         label: "No Alliance",   color: "border-gray-300 text-gray-600 hover:border-gray-500" },
 ];
 
 type Props = {
@@ -24,6 +23,7 @@ type Props = {
   outboundTimes: string[];
   returnTimes: string[];
   selectedAlliance: Alliance | "";
+  outboundLabel?: string;
   onChange: (outbound: string[], ret: string[]) => void;
   onAllianceChange: (alliance: Alliance | "") => void;
 };
@@ -33,22 +33,21 @@ function toggle(arr: string[], val: string): string[] {
 }
 
 function TimeFilter({
-  label, selected, onChange, disabled,
+  label, selected, onChange,
 }: {
-  label: string; selected: string[]; onChange: (v: string[]) => void; disabled?: boolean;
+  label: string; selected: string[]; onChange: (v: string[]) => void;
 }) {
   return (
-    <div className={`flex flex-col gap-2 ${disabled ? "opacity-40" : ""}`}>
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-gray-600">{label}</span>
-        {disabled && <span className="text-xs text-gray-400 italic">(return times unavailable)</span>}
       </div>
       <div className="flex flex-wrap gap-2">
         {TIME_WINDOWS.map((w) => {
           const key = `${w.start}-${w.end}`;
           const active = selected.includes(key);
           return (
-            <button key={key} type="button" disabled={disabled}
+            <button key={key} type="button"
               onClick={() => onChange(toggle(selected, key))}
               className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
                 active ? "bg-blue-600 text-white border-blue-600"
@@ -68,13 +67,13 @@ function TimeFilter({
   );
 }
 
-export default function FlightFilters({ isRoundTrip, outboundTimes, returnTimes, selectedAlliance, onChange, onAllianceChange }: Props) {
+export default function FlightFilters({ isRoundTrip, outboundTimes, returnTimes, selectedAlliance, outboundLabel = "Outbound Departure", onChange, onAllianceChange }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-5">
       <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Filter Results</h3>
 
       <TimeFilter
-        label="Outbound Departure"
+        label={outboundLabel}
         selected={outboundTimes}
         onChange={(v) => onChange(v, returnTimes)}
       />
@@ -84,7 +83,6 @@ export default function FlightFilters({ isRoundTrip, outboundTimes, returnTimes,
           label="Return Departure"
           selected={returnTimes}
           onChange={(v) => onChange(outboundTimes, v)}
-          disabled
         />
       )}
 

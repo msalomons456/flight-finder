@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { SearchResults, FlightResult, Leg } from "@/app/page";
+import { getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
 
 type SortKey = "price" | "duration";
 
@@ -143,8 +144,7 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
             </span>
           </div>
           <p className="text-sm text-gray-500">
-            Showing {Math.min(pageSize, data.results.length)} of {data.results.length} results
-            {data.tripType === "1" && " · Prices are per person, round trip"}
+            Showing {Math.min(pageSize, data.results.length)} of {data.results.length} results · One-way fare per person
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -195,8 +195,31 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
                           {r.airline}{r.flightNumber ? ` ${r.flightNumber.replace(/^[A-Z0-9]+\s/, "")}` : ""}
                         </span>
                       </div>
+                      {(() => {
+                        const alliance = getAlliance(getAirlineCodeFromName(r.airline));
+                        if (alliance === "None") return null;
+                        const styles =
+                          alliance === "Star Alliance" ? "text-blue-600" :
+                          alliance === "SkyTeam"       ? "text-sky-600" :
+                          "text-red-600";
+                        return <div className={`text-[10px] font-semibold ${styles}`}>{alliance}</div>;
+                      })()}
                     </div>
                   </div>
+
+                  {/* Fare class badge */}
+                  {r.legs?.[0]?.travelClass && (
+                    <div className="hidden sm:flex items-center">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                        r.legs[0].travelClass === "First" ? "bg-amber-100 text-amber-800" :
+                        r.legs[0].travelClass === "Business" ? "bg-purple-100 text-purple-800" :
+                        r.legs[0].travelClass === "Premium Economy" ? "bg-sky-100 text-sky-800" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                        {r.legs[0].travelClass}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Route */}
                   <div className="flex-1 sm:px-4 flex flex-col gap-1">
@@ -246,12 +269,20 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select" }:
                     )}
                   </div>
 
+                  {/* Arrival airport */}
+                  <div className="hidden sm:block text-right sm:w-16">
+                    <div className="text-2xl font-bold text-blue-800">
+                      {r.legs[r.legs.length - 1]?.arrivalCode}
+                    </div>
+                  </div>
+
                   {/* Price + Select */}
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <div className={`text-2xl font-bold ${i === 0 ? "text-green-600" : "text-gray-800"}`}>
                         ${r.price.toFixed(0)}
                       </div>
+                      <div className="text-xs text-gray-400">one-way fare</div>
                       {i > 0 && (
                         <div className="text-xs text-red-400">+${(r.price - cheapest).toFixed(0)} more</div>
                       )}

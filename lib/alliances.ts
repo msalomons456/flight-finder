@@ -25,6 +25,73 @@ export function getAlliance(airlineCode: string): Alliance {
   return AIRLINE_ALLIANCE[airlineCode] ?? "None";
 }
 
+export const AIRLINE_WEBSITES: Record<string, string> = {
+  // North America
+  AA: "https://www.aa.com",
+  DL: "https://www.delta.com",
+  UA: "https://www.united.com",
+  AS: "https://www.alaskaair.com",
+  B6: "https://www.jetblue.com",
+  WN: "https://www.southwest.com",
+  NK: "https://www.spirit.com",
+  F9: "https://www.flyfrontier.com",
+  AC: "https://www.aircanada.com",
+  WS: "https://www.westjet.com",
+  AM: "https://www.aeromexico.com",
+  CM: "https://www.copaair.com",
+  // Europe
+  BA: "https://www.britishairways.com",
+  LH: "https://www.lufthansa.com",
+  AF: "https://www.airfrance.com",
+  KL: "https://www.klm.com",
+  LX: "https://www.swiss.com",
+  OS: "https://www.austrian.com",
+  SN: "https://www.brusselsairlines.com",
+  TP: "https://www.tapair.com",
+  IB: "https://www.iberia.com",
+  AY: "https://www.finnair.com",
+  SK: "https://www.flysas.com",
+  TK: "https://www.turkishairlines.com",
+  FR: "https://www.ryanair.com",
+  U2: "https://www.easyjet.com",
+  A3: "https://en.aegeanair.com",
+  // Asia-Pacific
+  SQ: "https://www.singaporeair.com",
+  NH: "https://www.ana.co.jp/en",
+  JL: "https://www.jal.com",
+  CX: "https://www.cathaypacific.com",
+  QF: "https://www.qantas.com",
+  NZ: "https://www.airnewzealand.com",
+  MH: "https://www.malaysiaairlines.com",
+  TG: "https://www.thaiairways.com",
+  BR: "https://www.evaair.com",
+  OZ: "https://www.flyasiana.com",
+  KE: "https://www.koreanair.com",
+  CA: "https://www.airchina.com",
+  MU: "https://www.ceair.com",
+  CZ: "https://www.csair.com",
+  ZH: "https://www.shenzhenair.com",
+  AI: "https://www.airindia.com",
+  VN: "https://www.vietnamairlines.com",
+  GA: "https://www.garuda-indonesia.com",
+  UL: "https://www.srilankan.com",
+  FJ: "https://www.fijiairways.com",
+  // Middle East & Africa
+  QR: "https://www.qatarairways.com",
+  ET: "https://www.ethiopianairlines.com",
+  MS: "https://www.egyptair.com",
+  ME: "https://www.mea.com.lb",
+  KQ: "https://www.kenya-airways.com",
+  SA: "https://www.flysaa.com",
+  // South America
+  LA: "https://www.latamairlines.com",
+  RJ: "https://www.rj.com",
+};
+
+export function getAirlineWebsite(airlineCode: string): string {
+  return AIRLINE_WEBSITES[airlineCode] ?? "https://www.google.com/flights";
+}
+
 export function getAirlineCodeFromName(airlineName: string): string {
   const nameToCode: Record<string, string> = {
     "United": "UA", "Lufthansa": "LH", "Air Canada": "AC", "Singapore Airlines": "SQ",
@@ -35,6 +102,7 @@ export function getAirlineCodeFromName(airlineName: string): string {
     "Cathay Pacific": "CX", "Qantas": "QF", "Japan Airlines": "JL",
     "Finnair": "AY", "Iberia": "IB", "Malaysia Airlines": "MH", "Qatar Airways": "QR",
     "Alaska Airlines": "AS", "Alaska": "AS", "JetBlue": "B6",
+    "Air New Zealand": "NZ",
     "Southwest": "WN", "Spirit": "NK", "Frontier": "F9", "LATAM": "LA",
     "WestJet": "WS", "Ryanair": "FR", "EasyJet": "U2",
     "China Southern": "CZ", "Ethiopian Airlines": "ET", "Ethiopian": "ET",

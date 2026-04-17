@@ -98,7 +98,8 @@ async function flightsFromOrigin(
   returnDate: string,
   tripType: number,
   adults: number,
-  maxStops: number | null
+  maxStops: number | null,
+  travelClass: number
 ): Promise<FlightResult[]> {
   try {
     const params: Record<string, unknown> = {
@@ -108,6 +109,7 @@ async function flightsFromOrigin(
       outbound_date: date,
       type: tripType,
       adults,
+      travel_class: travelClass,
       currency: "USD",
       hl: "en",
       api_key: process.env.SERPAPI_KEY,
@@ -141,6 +143,7 @@ export async function GET(req: NextRequest) {
   const adults = parseInt(searchParams.get("adults") || "1");
   const maxStopsParam = searchParams.get("maxStops");
   const maxStops = maxStopsParam !== null && maxStopsParam !== "" ? parseInt(maxStopsParam) : null;
+  const travelClass = parseInt(searchParams.get("travelClass") || "1");
 
   if (!destination || !airportsParam || !date || !regionLabel) {
     return NextResponse.json({ error: "Missing required params" }, { status: 400 });
@@ -150,7 +153,7 @@ export async function GET(req: NextRequest) {
 
   const settled = await Promise.allSettled(
     airports.map((origin) =>
-      flightsFromOrigin(origin, destination, date, returnDate, tripType, adults, maxStops)
+      flightsFromOrigin(origin, destination, date, returnDate, tripType, adults, maxStops, travelClass)
     )
   );
 
