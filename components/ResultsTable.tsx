@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { SearchResults, FlightResult, Leg } from "@/app/page";
 import { getAlliance, getAirlineCodeFromName } from "@/lib/alliances";
+import { findAirportByIata } from "@/lib/airports";
 
 type SortKey = "price" | "duration";
 
@@ -303,9 +304,22 @@ export default function ResultsTable({ data, onSelect, selectLabel = "Select", s
 
                   {/* Arrival airport */}
                   <div className="hidden sm:block text-right sm:w-16">
-                    <div className="text-2xl font-bold text-blue-800">
-                      {r.legs[r.legs.length - 1]?.arrivalCode}
-                    </div>
+                    {(() => {
+                      const arrivalCode = r.legs[r.legs.length - 1]?.arrivalCode;
+                      const airport = arrivalCode ? findAirportByIata(arrivalCode) : null;
+                      return (
+                        <div className="relative group inline-block cursor-default">
+                          <div className="text-2xl font-bold text-blue-800">{arrivalCode}</div>
+                          {airport && (
+                            <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-max max-w-[180px] rounded-lg bg-gray-900 text-white text-xs px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center shadow-lg">
+                              <span className="block font-semibold">{airport.city}</span>
+                              <span className="block text-gray-300 mt-0.5">{airport.country}</span>
+                              <span className="absolute top-full right-4 border-4 border-transparent border-t-gray-900" />
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Price + Select */}
