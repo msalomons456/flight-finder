@@ -31,7 +31,7 @@ export const AIRPORTS: Airport[] = [
   { iata: "LAX", name: "Los Angeles International", city: "Los Angeles", country: "US" },
   { iata: "SFO", name: "San Francisco International", city: "San Francisco", country: "US" },
   { iata: "SJC", name: "San José Mineta International", city: "San Jose", country: "US" },
-  { iata: "OAK", name: "Oakland International", city: "Oakland", country: "US" },
+  { iata: "OAK", name: "Oakland International", city: "Oakland / San Francisco", country: "US" },
   { iata: "SEA", name: "Seattle-Tacoma International", city: "Seattle", country: "US" },
   { iata: "PDX", name: "Portland International", city: "Portland", country: "US" },
   { iata: "LAS", name: "Harry Reid International", city: "Las Vegas", country: "US" },
@@ -76,7 +76,7 @@ export const AIRPORTS: Airport[] = [
   { iata: "FAT", name: "Fresno Yosemite International", city: "Fresno", country: "US" },
   { iata: "SMF", name: "Sacramento International", city: "Sacramento", country: "US" },
   { iata: "SNA", name: "John Wayne Airport", city: "Orange County", country: "US" },
-  { iata: "BUR", name: "Hollywood Burbank Airport", city: "Burbank", country: "US" },
+  { iata: "BUR", name: "Hollywood Burbank Airport", city: "Los Angeles", country: "US" },
   { iata: "LGB", name: "Long Beach Airport", city: "Long Beach", country: "US" },
   { iata: "ONT", name: "Ontario International", city: "Ontario", country: "US" },
   { iata: "PSP", name: "Palm Springs International", city: "Palm Springs", country: "US" },
@@ -117,7 +117,9 @@ export const AIRPORTS: Airport[] = [
 
   // South America
   { iata: "GRU", name: "São Paulo/Guarulhos International", city: "São Paulo", country: "Brazil" },
+  { iata: "CGH", name: "Congonhas Airport", city: "São Paulo", country: "Brazil" },
   { iata: "GIG", name: "Rio de Janeiro/Galeão International", city: "Rio de Janeiro", country: "Brazil" },
+  { iata: "SDU", name: "Santos Dumont Airport", city: "Rio de Janeiro", country: "Brazil" },
   { iata: "BSB", name: "Presidente Juscelino Kubitschek International", city: "Brasilia", country: "Brazil" },
   { iata: "EZE", name: "Ministro Pistarini International", city: "Buenos Aires", country: "Argentina" },
   { iata: "AEP", name: "Jorge Newbery Airpark", city: "Buenos Aires", country: "Argentina" },
