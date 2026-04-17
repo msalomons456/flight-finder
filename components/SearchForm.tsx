@@ -5,7 +5,16 @@ import RegionCombobox from "@/components/RegionCombobox";
 import { type Region } from "@/lib/regions";
 
 type Props = {
-  onSearch: (params: { destination: string; regionLabel: string; airports: string[]; date: string; adults: string; maxStops: string }) => void;
+  onSearch: (params: {
+    destination: string;
+    regionLabel: string;
+    airports: string[];
+    date: string;
+    returnDate: string;
+    tripType: "1" | "2";
+    adults: string;
+    maxStops: string;
+  }) => void;
   loading: boolean;
 };
 
@@ -15,18 +24,23 @@ export default function SearchForm({ onSearch, loading }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const [destination, setDestination] = useState("");
   const [region, setRegion] = useState<Region | null>(null);
+  const [tripType, setTripType] = useState<"1" | "2">("2");
   const [date, setDate] = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [adults, setAdults] = useState("1");
   const [maxStops, setMaxStops] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!destination || !region || !date) return;
+    if (tripType === "1" && !returnDate) return;
     onSearch({
       destination: destination.toUpperCase(),
       regionLabel: region.label,
       airports: region.airports,
       date,
+      returnDate: tripType === "1" ? returnDate : "",
+      tripType,
       adults,
       maxStops,
     });
@@ -37,6 +51,24 @@ export default function SearchForm({ onSearch, loading }: Props) {
       onSubmit={handleSubmit}
       className="bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4"
     >
+      {/* Trip type toggle */}
+      <div className="flex gap-2">
+        {[{ value: "2", label: "One Way" }, { value: "1", label: "Round Trip" }].map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setTripType(opt.value as "1" | "2")}
+            className={`px-5 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+              tripType === opt.value
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">Destination Airport</label>
@@ -69,20 +101,49 @@ export default function SearchForm({ onSearch, loading }: Props) {
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-gray-600">Passengers</label>
-          <select
-            value={adults}
-            onChange={(e) => setAdults(e.target.value)}
-            className={inputClass}
-          >
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <option key={n} value={n}>{n} {n === 1 ? "adult" : "adults"}</option>
-            ))}
-          </select>
-        </div>
+        {tripType === "1" ? (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-gray-600">Return Date</label>
+            <input
+              type="date"
+              value={returnDate}
+              min={date || today}
+              onChange={(e) => setReturnDate(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-gray-600">Passengers</label>
+            <select
+              value={adults}
+              onChange={(e) => setAdults(e.target.value)}
+              className={inputClass}
+            >
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <option key={n} value={n}>{n} {n === 1 ? "adult" : "adults"}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        <div className="flex flex-col gap-1 sm:col-span-2">
+        {tripType === "1" && (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-gray-600">Passengers</label>
+            <select
+              value={adults}
+              onChange={(e) => setAdults(e.target.value)}
+              className={inputClass}
+            >
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <option key={n} value={n}>{n} {n === 1 ? "adult" : "adults"}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className={`flex flex-col gap-1 ${tripType === "1" ? "sm:col-span-2" : "sm:col-span-2"}`}>
           <label className="text-sm font-semibold text-gray-600">Max Stops</label>
           <div className="flex gap-2">
             {[

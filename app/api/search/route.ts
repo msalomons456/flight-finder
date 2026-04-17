@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getJson } from "serpapi";
 
-type Layover = { id: string; name: string; duration: number; overnight?: boolean };
+type Layover = { id: string; name: string; duration: number; overnight?: boolean; nextFlightNumber?: string };
+
+type Leg = {
+  flightNumber: string;
+  airline: string;
+  airlineLogo: string;
+  airplane: string;
+  departureAirportName: string;
+  departureCode: string;
+  departureTime: string;
+  arrivalAirportName: string;
+  arrivalCode: string;
+  arrivalTime: string;
+  duration: number;
+  travelClass: string;
+};
 
 type FlightResult = {
   origin: string;
@@ -15,30 +30,49 @@ type FlightResult = {
   duration: string;
   stops: number;
   layovers: Layover[];
+  legs: Leg[];
 };
 
 function toResult(origin: string, flight: Record<string, unknown>): FlightResult | null {
-  const legs = (flight.flights as {
-    departure_airport: { time: string };
-    arrival_airport: { time: string };
+  const rawLegs = (flight.flights as {
+    departure_airport: { name: string; id: string; time: string };
+    arrival_airport: { name: string; id: string; time: string };
     airline: string;
     airline_logo: string;
     flight_number: string;
+    airplane: string;
+    travel_class: string;
     duration: number;
   }[]) ?? [];
-  if (!legs.length) return null;
+  if (!rawLegs.length) return null;
 
-  const firstLeg = legs[0];
-  const lastLeg = legs[legs.length - 1];
-  const totalMinutes = legs.reduce((sum, l) => sum + (l.duration ?? 0), 0);
+  const firstLeg = rawLegs[0];
+  const lastLeg = rawLegs[rawLegs.length - 1];
+  const totalMinutes = rawLegs.reduce((sum, l) => sum + (l.duration ?? 0), 0);
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
 
-  const layovers: Layover[] = ((flight.layovers as Layover[]) ?? []).map((l) => ({
+  const layovers: Layover[] = ((flight.layovers as Layover[]) ?? []).map((l, i) => ({
     id: l.id,
     name: l.name,
     duration: l.duration,
     overnight: l.overnight ?? false,
+    nextFlightNumber: rawLegs[i + 1]?.flight_number ?? "",
+  }));
+
+  const legs: Leg[] = rawLegs.map((l) => ({
+    flightNumber: l.flight_number ?? "",
+    airline: l.airline,
+    airlineLogo: l.airline_logo,
+    airplane: l.airplane ?? "",
+    departureAirportName: l.departure_airport.name,
+    departureCode: l.departure_airport.id,
+    departureTime: l.departure_airport.time,
+    arrivalAirportName: l.arrival_airport.name,
+    arrivalCode: l.arrival_airport.id,
+    arrivalTime: l.arrival_airport.time,
+    duration: l.duration,
+    travelClass: l.travel_class ?? "Economy",
   }));
 
   return {
@@ -53,6 +87,7 @@ function toResult(origin: string, flight: Record<string, unknown>): FlightResult
     duration: `PT${h}H${m}M`,
     stops: legs.length - 1,
     layovers,
+    legs,
   };
 }
 
@@ -60,21 +95,25 @@ async function flightsFromOrigin(
   origin: string,
   destination: string,
   date: string,
+  returnDate: string,
+  tripType: number,
   adults: number,
   maxStops: number | null
 ): Promise<FlightResult[]> {
   try {
-    const data = await getJson({
+    const params: Record<string, unknown> = {
       engine: "google_flights",
       departure_id: origin,
       arrival_id: destination,
       outbound_date: date,
-      type: 2,
+      type: tripType,
       adults,
       currency: "USD",
       hl: "en",
       api_key: process.env.SERPAPI_KEY,
-    });
+    };
+    if (tripType === 1 && returnDate) params.return_date = returnDate;
+    const data = await getJson(params);
 
     let flights = [...(data.best_flights ?? []), ...(data.other_flights ?? [])];
 
@@ -97,6 +136,8 @@ export async function GET(req: NextRequest) {
   const regionLabel = searchParams.get("regionLabel");
   const airportsParam = searchParams.get("airports");
   const date = searchParams.get("date");
+  const returnDate = searchParams.get("returnDate") || "";
+  const tripType = parseInt(searchParams.get("tripType") || "2");
   const adults = parseInt(searchParams.get("adults") || "1");
   const maxStopsParam = searchParams.get("maxStops");
   const maxStops = maxStopsParam !== null && maxStopsParam !== "" ? parseInt(maxStopsParam) : null;
@@ -109,13 +150,14 @@ export async function GET(req: NextRequest) {
 
   const settled = await Promise.allSettled(
     airports.map((origin) =>
-      flightsFromOrigin(origin, destination, date, adults, maxStops)
+      flightsFromOrigin(origin, destination, date, returnDate, tripType, adults, maxStops)
     )
   );
 
   const results = settled
     .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+    .filter((r) => typeof r.price === "number" && !isNaN(r.price))
     .sort((a, b) => a.price - b.price);
 
-  return NextResponse.json({ region: regionLabel, destination, results });
+  return NextResponse.json({ region: regionLabel, destination, tripType: String(tripType), results });
 }
