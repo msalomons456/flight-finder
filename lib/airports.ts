@@ -409,3 +409,16 @@ export function searchAirportsByCodeOrName(query: string): Airport[] {
       a.name.toLowerCase().includes(q)
   ).slice(0, 5);
 }
+
+function cityTokens(city: string): string[] {
+  return city.split("/").map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+
+export function getNearbyAirports(airport: Airport): Airport[] {
+  const tokens = cityTokens(airport.city);
+  return AIRPORTS.filter(
+    (a) =>
+      a.iata !== airport.iata &&
+      cityTokens(a.city).some((t) => tokens.includes(t))
+  );
+}

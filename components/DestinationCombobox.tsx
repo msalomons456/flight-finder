@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { searchAirports, type Airport } from "@/lib/airports";
+import { searchAirports, getNearbyAirports, type Airport } from "@/lib/airports";
 
 type Props = {
   value: Airport | null;
@@ -14,7 +14,10 @@ export default function DestinationCombobox({ value, onChange, inputClass }: Pro
   const [suggestions, setSuggestions] = useState<Airport[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [nearbyDismissed, setNearbyDismissed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const nearby = value && !nearbyDismissed ? getNearbyAirports(value) : [];
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -46,6 +49,7 @@ export default function DestinationCombobox({ value, onChange, inputClass }: Pro
     setSuggestions([]);
     setOpen(false);
     setActiveIndex(-1);
+    setNearbyDismissed(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -97,6 +101,29 @@ export default function DestinationCombobox({ value, onChange, inputClass }: Pro
             </li>
           ))}
         </ul>
+      )}
+      {nearby.length > 0 && (
+        <div className="mt-1.5 flex items-center gap-2 flex-wrap px-1">
+          <span className="text-xs text-gray-400">Also in {value!.city}:</span>
+          {nearby.map((a) => (
+            <button
+              key={a.iata}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); select(a); }}
+              className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-2 py-0.5 rounded transition-colors"
+            >
+              {a.iata} · {a.name}
+            </button>
+          ))}
+          <button
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); setNearbyDismissed(true); }}
+            className="ml-auto text-gray-300 hover:text-gray-500 text-xs leading-none"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );
