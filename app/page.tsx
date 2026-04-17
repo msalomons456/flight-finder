@@ -447,6 +447,7 @@ export default function Home() {
                       results={filteredOutbound.results}
                       onSelect={handleSelectOutbound}
                       selectLabel={isRoundTrip ? "Select & Find Return" : "Select"}
+                      pinAtOrigin={searchParams?.destination !== "surprise"}
                     />
                   </div>
                 ) : (

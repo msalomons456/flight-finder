@@ -12,9 +12,10 @@ type Props = {
   results: FlightResult[];
   onSelect: (flight: FlightResult) => void;
   selectLabel?: string;
+  pinAtOrigin?: boolean;
 };
 
-export default function FlightMap({ results, onSelect, selectLabel = "Select" }: Props) {
+export default function FlightMap({ results, onSelect, selectLabel = "Select", pinAtOrigin = false }: Props) {
   const [popupFlight, setPopupFlight] = useState<FlightResult | null>(null);
 
   const cheapest = results.length > 0 ? Math.min(...results.map((r) => r.price)) : 0;
@@ -36,7 +37,8 @@ export default function FlightMap({ results, onSelect, selectLabel = "Select" }:
 
         {results.map((r, i) => {
           const arrivalCode = r.legs[r.legs.length - 1]?.arrivalCode;
-          const coords = arrivalCode ? AIRPORT_COORDS[arrivalCode] : null;
+          const pinCode = pinAtOrigin ? r.origin : arrivalCode;
+          const coords = pinCode ? AIRPORT_COORDS[pinCode] : null;
           if (!coords) return null;
           const isCheapest = r.price === cheapest;
 
@@ -65,7 +67,8 @@ export default function FlightMap({ results, onSelect, selectLabel = "Select" }:
 
         {popupFlight && (() => {
           const arrivalCode = popupFlight.legs[popupFlight.legs.length - 1]?.arrivalCode;
-          const coords = arrivalCode ? AIRPORT_COORDS[arrivalCode] : null;
+          const pinCode = pinAtOrigin ? popupFlight.origin : arrivalCode;
+          const coords = pinCode ? AIRPORT_COORDS[pinCode] : null;
           if (!coords) return null;
           return (
             <Popup
